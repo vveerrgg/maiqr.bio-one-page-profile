@@ -207,6 +207,56 @@
 - [ ] Implement theme presets
 - [ ] Add theme export/import
 
+## Profile Page Features and Layout Best Practices
+
+### Profile Page Features
+- [ ] Default avatar placeholder
+  - SVG format for scalability
+  - Neutral colors compatible with themes
+  - Gender-neutral design
+- [ ] Profile information placeholders
+  - Name
+  - Website
+  - Bio
+  - Additional metadata (to be implemented)
+- [ ] User Actions
+  - Copy profile URL with visual feedback
+  - Easy navigation back to home
+  - Share functionality (to be implemented)
+
+### Layout Best Practices
+1. **Flexbox Layouts**
+   - Use `space-between` for full-width distributed layouts
+   - Apply `flex: 0 1 auto` for proper item sizing
+   - Center align items vertically with `align-items: center`
+
+2. **User Feedback**
+   - Provide visual feedback for copy operations
+   - Use animations sparingly and purposefully
+   - Include hover states for interactive elements
+   - Maintain consistent theme colors
+
+3. **Mobile Considerations**
+   - Ensure buttons are touch-friendly
+   - Maintain readable text sizes
+   - Use appropriate spacing for mobile screens
+
+4. **Accessibility**
+   - Include proper alt text for images
+   - Ensure sufficient color contrast
+   - Make interactive elements keyboard accessible
+   - Add ARIA labels where needed
+
+### Component Organization
+- [ ] Profile card component
+  - Header section with avatar and basic info
+  - Bio section
+  - Action buttons section
+- [ ] Reusable components
+  - Copy URL button
+  - Theme-aware links
+  - Profile image component
+
 ## Reference Implementation Notes
 
 ### From vveerrgg.online
