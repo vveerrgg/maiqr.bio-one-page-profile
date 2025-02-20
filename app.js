@@ -158,6 +158,12 @@ const views = {
     profile: () => {
         const npub = window.location.hash.replace('#/p/', '');
         
+        // Validate npub format
+        if (!npub || !npub.startsWith('npub1') || npub.length !== 63) {
+            window.location.hash = '/404';
+            return views.notFound();
+        }
+        
         // Generate QR code after the view is rendered
         setTimeout(() => {
             const qrContainer = document.getElementById('qr-modal-content');
