@@ -65,6 +65,109 @@
 - [ ] Build optimization
 - [ ] Cache management
 
+## Theme Management
+
+### CSS Variables and Theme Structure
+- Root-level CSS variables for consistent theming:
+  ```css
+  :root {  /* Light theme */
+      --primary-color: #2d3436;
+      --secondary-color: #0984e3;
+      --background-color: #f5f6fa;
+      --card-background: #ffffff;
+      --text-color: #2d3436;
+      --header-bg: #ffffff;
+      --header-text: #2d3436;
+      --border-color: rgba(0, 0, 0, 0.1);
+  }
+
+  [data-theme="dark"] {  /* Dark theme */
+      --primary-color: #f5f6fa;
+      --secondary-color: #74b9ff;
+      --background-color: #1a1a1a;
+      --card-background: #2d2d2d;
+      --text-color: #ffffff;
+      --header-bg: #2d2d2d;
+      --header-text: #ffffff;
+      --border-color: rgba(255, 255, 255, 0.1);
+  }
+  ```
+
+### State Management
+- Centralized theme management through AppState:
+  ```javascript
+  const AppState = {
+      isInitialized: false,
+      currentTheme: null,
+      // ... other state
+  }
+  ```
+- Single initialization point to prevent race conditions
+- Proper async initialization flow
+- System theme preference detection and sync
+
+### Loading State
+- Use HTML class to manage loading state:
+  ```html
+  <html lang="en" data-theme="light" class="loading">
+  ```
+- Hide content during initialization:
+  ```css
+  html.loading {
+      visibility: hidden;
+  }
+  ```
+- Remove loading state after initialization:
+  ```javascript
+  document.documentElement.classList.remove('loading');
+  ```
+
+### Theme Transitions
+- Smooth transitions for theme changes:
+  ```css
+  body {
+      transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  ```
+- Apply transitions to all themed elements
+- Use proper CSS variable inheritance
+
+### Best Practices
+1. **Theme Application**
+   - Apply theme variables at root level
+   - Use CSS variables for all themed properties
+   - Ensure consistent color usage across components
+
+2. **State Management**
+   - Single source of truth for theme state
+   - Proper event handling for theme changes
+   - System theme preference synchronization
+
+3. **Performance**
+   - Use CSS transitions for smooth theme changes
+   - Prevent flash of unstyled content
+   - Efficient theme switching without re-renders
+
+4. **Accessibility**
+   - Maintain proper contrast ratios in both themes
+   - Use semantic color variables
+   - Support system theme preferences
+
+### Theme Components
+- Header and navigation
+- Forms and inputs
+- Cards and containers
+- Typography and links
+- Borders and shadows
+- Icons and buttons
+
+### Future Improvements
+- [ ] Add theme preview functionality
+- [ ] Support custom theme creation
+- [ ] Add theme transition animations
+- [ ] Implement theme presets
+- [ ] Add theme export/import
+
 ## Reference Implementation Notes
 
 ### From vveerrgg.online
