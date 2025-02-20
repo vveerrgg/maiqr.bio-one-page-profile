@@ -247,6 +247,36 @@
    - Make interactive elements keyboard accessible
    - Add ARIA labels where needed
 
+### Responsive Design Guidelines
+1. **Breakpoints**
+   - Mobile (base): < 640px
+   - Tablet: >= 640px
+   - Laptop: >= 1024px
+   - Desktop: >= 1280px
+
+2. **Mobile-First Approach**
+   - Start with mobile styles as the base
+   - Use min-width media queries to enhance for larger screens
+   - Keep core functionality accessible on all devices
+
+3. **Layout Adjustments**
+   - Profile header: vertical on mobile, horizontal on tablet+
+   - Profile actions: stacked on mobile, horizontal on tablet+
+   - Container padding and margins adjust per breakpoint
+   - Avatar size changes based on screen size
+
+4. **Interactive Elements**
+   - Larger touch targets on mobile
+   - Full-width buttons on small screens
+   - Hover effects only on devices that support hover
+   - Maintain minimum tap target size (44px)
+
+5. **Performance Considerations**
+   - Optimize images for different screen sizes
+   - Minimize layout shifts during loading
+   - Use appropriate image formats (SVG for icons)
+   - Consider reduced motion preferences
+
 ### Component Organization
 - [ ] Profile card component
   - Header section with avatar and basic info

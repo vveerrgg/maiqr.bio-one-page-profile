@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "nostr-crypto-utils": "^0.4.15"
+  }
+}

@@ -7,6 +7,10 @@
     --header-bg: #ffffff;
     --header-text: #2d3436;
     --border-color: rgba(0, 0, 0, 0.1);
+    --breakpoint-sm: 640px;   /* Small devices (phones) */
+    --breakpoint-md: 768px;   /* Medium devices (tablets) */
+    --breakpoint-lg: 1024px;  /* Large devices (laptops) */
+    --breakpoint-xl: 1280px;  /* Extra large devices */
 }
 
 [data-theme="dark"] {
@@ -47,8 +51,8 @@ body {
 .container {
     max-width: 680px;
     width: 100%;
-    margin: 80px auto 0;
-    padding: 40px 20px;
+    margin: 60px auto 0;
+    padding: 20px;
     flex: 1;
 }
 
@@ -246,7 +250,7 @@ footer a:active {
 .profile-card {
     background: var(--card-background);
     border-radius: 16px;
-    padding: 2rem;
+    padding: 1.5rem;
     margin: 2rem auto;
     max-width: 600px;
     box-shadow: 0 4px 6px -1px var(--border-color);
@@ -254,16 +258,19 @@ footer a:active {
 
 .profile-header {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 2rem;
+    text-align: center;
+    gap: 1rem;
     margin-bottom: 2rem;
 }
 
 .profile-avatar {
-    width: 128px;
-    height: 128px;
+    width: 96px;
+    height: 96px;
     border-radius: 50%;
     background: var(--background-color);
+    margin: 0 auto;
 }
 
 .profile-info {
@@ -309,6 +316,7 @@ footer a:active {
     font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.2s ease;
+    width: 100%;
 }
 
 .copy-url-btn:hover {
@@ -339,10 +347,12 @@ footer a:active {
 /* Profile Actions Section */
 .profile-actions {
     display: flex;
+    flex-direction: column-reverse;
     align-items: center;
     justify-content: space-between;
     margin-top: 1.5rem;
     width: 100%;
+    gap: 1rem;
 }
 
 .profile-actions > * {
@@ -382,12 +392,46 @@ html:not(.loading):before {
     opacity: 0;
 }
 
-@media (max-width: 640px) {
+@media (min-width: 640px) {
     .container {
-        padding: 1rem;
+        margin: 80px auto 0;
+        padding: 40px 20px;
     }
-    
-    #profile-container {
-        padding: 1.5rem;
+
+    .profile-card {
+        padding: 2rem;
+    }
+
+    .profile-header {
+        flex-direction: row;
+        text-align: left;
+        align-items: flex-start;
+        gap: 2rem;
+    }
+
+    .profile-avatar {
+        width: 128px;
+        height: 128px;
+        margin: 0;
+    }
+
+    .profile-actions {
+        flex-direction: row;
+        gap: 0;
+    }
+
+    .copy-url-btn {
+        width: auto;
+    }
+}
+
+@media (min-width: 1024px) {
+    .profile-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .profile-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 12px -1px var(--border-color);
     }
 }
