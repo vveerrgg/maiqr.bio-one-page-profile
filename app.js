@@ -161,12 +161,26 @@ const views = {
     `,
     
     profile: () => {
-        const npub = window.location.hash.split('/p/')[1];
+        const npub = window.location.hash.replace('#/p/', '');
         return `
             <div class="container">
-                <h1>Profile Page</h1>
-                <p>Profile goes here for: ${npub || 'unknown'}</p>
-                <p><a href="#/">Back to Home</a></p>
+                <div class="profile-card">
+                    <div class="profile-header">
+                        <img src="assets/imgs/default-avatar.svg" alt="Profile" class="profile-avatar">
+                        <div class="profile-info">
+                            <h1 class="profile-name profile-placeholder">Satoshi Nakamoto</h1>
+                            <a href="#" class="profile-website profile-placeholder">https://bitcoin.org</a>
+                            <p class="profile-bio profile-placeholder">Creator of Bitcoin. Focused on decentralization, cryptography, and digital currencies. Building tools for financial freedom.</p>
+                        </div>
+                    </div>
+                    <div class="profile-actions">
+                        <a href="#/" class="back-link">← Back to Home</a>
+                        <button class="copy-url-btn" onclick="copyProfileUrl()">
+                            <i class="fas fa-copy"></i>
+                            <span class="copy-text">Copy maiqr.bio Profile URL</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         `;
     }
@@ -180,6 +194,33 @@ function handleNpubSubmit() {
         // Remove any existing hash or /p/ prefix
         const cleanNpub = npub.replace(/^#?\/p\//, '').replace(/^nostr:/, '');
         window.location.hash = `/p/${cleanNpub}`;
+    }
+}
+
+// Copy profile URL to clipboard
+async function copyProfileUrl() {
+    const url = window.location.href;
+    try {
+        await navigator.clipboard.writeText(url);
+        const btn = document.querySelector('.copy-url-btn');
+        const text = btn.querySelector('.copy-text');
+        const icon = btn.querySelector('i');
+        
+        // Update button state
+        btn.classList.add('copied');
+        text.textContent = 'Copied!';
+        icon.classList.remove('fa-copy');
+        icon.classList.add('fa-check');
+        
+        // Reset button state after 2 seconds
+        setTimeout(() => {
+            btn.classList.remove('copied');
+            text.textContent = 'Copy Profile URL';
+            icon.classList.remove('fa-check');
+            icon.classList.add('fa-copy');
+        }, 2000);
+    } catch (err) {
+        console.error('Failed to copy URL:', err);
     }
 }
 
