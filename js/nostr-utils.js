@@ -61,16 +61,25 @@ export const nostrProfileFetcher = {
                 this.relayConnections.set(relay, ws);
             }
             
-            // Cleanup any existing subscription for this npub
-            const existingUnsub = this.activeSubscriptions.get(npub);
-            if (existingUnsub) {
-                existingUnsub();
-                this.activeSubscriptions.delete(npub);
+            // Generate a unique subscription ID for this request
+            const subId = `profile-${pubkey}-${Date.now()}`;
+            
+            // Cleanup any existing subscription for this pubkey
+            const existingSubId = Array.from(this.activeSubscriptions.keys())
+                .find(id => id.startsWith(`profile-${pubkey}`));
+            
+            if (existingSubId) {
+                const existingUnsub = this.activeSubscriptions.get(existingSubId);
+                if (typeof existingUnsub === 'function') {
+                    existingUnsub();
+                }
+                this.activeSubscriptions.delete(existingSubId);
             }
             
             // Create a promise that will resolve with the profile data
             const profilePromise = new Promise((resolve, reject) => {
                 let timeout = setTimeout(() => {
+                    this.activeSubscriptions.delete(subId);
                     reject(new Error('Timeout waiting for profile'));
                 }, 5000);
                 
@@ -86,8 +95,10 @@ export const nostrProfileFetcher = {
                             const content = JSON.parse(message[2].content);
                             resolve(content);
                             // Cleanup after successful fetch
-                            unsubscribe();
-                            this.activeSubscriptions.delete(npub);
+                            if (typeof unsubscribe === 'function') {
+                                unsubscribe();
+                            }
+                            this.activeSubscriptions.delete(subId);
                         } catch (error) {
                             reject(new Error('Invalid profile data'));
                         }
@@ -97,8 +108,10 @@ export const nostrProfileFetcher = {
                     }
                 });
                 
-                // Store the unsubscribe function
-                this.activeSubscriptions.set(npub, unsubscribe);
+                // Store the unsubscribe function with the subscription ID
+                if (typeof unsubscribe === 'function') {
+                    this.activeSubscriptions.set(subId, unsubscribe);
+                }
             });
             
             const profile = await profilePromise;
