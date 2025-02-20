@@ -19,13 +19,6 @@ const AppState = {
         // Remove loading state
         document.documentElement.classList.remove('loading');
         
-        // Apply theme
-        const root = document.documentElement;
-        root.style.setProperty('--primary-color', config.theme.primaryColor);
-        root.style.setProperty('--background-color', config.theme.backgroundColor);
-        root.style.setProperty('--text-color', config.theme.textColor);
-        root.style.setProperty('--secondary-color', config.theme.secondaryColor);
-
         // Get npub from URL if on maiqr.bio
         const path = window.location.pathname;
         const npubMatch = path.match(/\/p\/(npub[a-zA-Z0-9]+)/);

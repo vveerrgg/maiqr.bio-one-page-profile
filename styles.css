@@ -28,6 +28,8 @@
 
 html {
     height: 100%;
+    background-color: var(--background-color);
+    transition: background-color 0.3s ease;
 }
 
 body {
@@ -255,7 +257,7 @@ html.loading:before {
     bottom: 0;
     background: var(--background-color);
     z-index: 9999;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.3s ease, background-color 0.3s ease;
 }
 
 html:not(.loading):before {
