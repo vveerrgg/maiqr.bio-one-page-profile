@@ -1,5 +1,22 @@
 {
+  "name": "maiqr.bio",
+  "version": "1.0.0",
+  "description": "MaiQR.bio - One Page Profile",
+  "main": "app.js",
+  "scripts": {
+    "start": "serve -s .",
+    "deploy": "gh-pages -d ."
+  },
   "dependencies": {
     "nostr-crypto-utils": "^0.4.15"
-  }
+  },
+  "devDependencies": {
+    "gh-pages": "^6.1.1",
+    "serve": "^14.2.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vveerrgg/maiqr.bio-one-page-profile.git"
+  },
+  "homepage": "https://maiqr.bio"
 }

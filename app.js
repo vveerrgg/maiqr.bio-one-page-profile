@@ -110,12 +110,16 @@ class Router {
 const views = {
     home: () => `
         <div class="container">
-            <h1>#Helloworld</h1>
-            <p>Welcome to maiqr.bio</p>
-            <p>Try visiting <code>#/p/npub...</code> to see a profile</p>
-            <div class="npub-form">
-                <input type="text" id="npub-input" placeholder="Enter npub..." />
-                <button onclick="handleNpubSubmit()">View Profile</button>
+            <h1>MaiQR.bio</h1>
+            <p>To get started, visit <code>#/p/npub...</code> to see a profile, or enter an npub to create one.</p>
+            <div class="npub-form-container">
+                <div class="npub-form">
+                    <div class="input-group">
+                        <input type="text" id="npub-input" placeholder="Enter npub..." />
+                        <button onclick="handleNpubSubmit()">View Profile</button>
+                    </div>
+                    <div id="npub-error" class="error-message"></div>
+                </div>
             </div>
         </div>
     `,
@@ -188,12 +192,31 @@ const views = {
 // Handle npub form submission
 function handleNpubSubmit() {
     const input = document.getElementById('npub-input');
+    const errorDiv = document.getElementById('npub-error');
+    
     const npub = input.value.trim();
-    if (npub) {
-        // Remove any existing hash or /p/ prefix
-        const cleanNpub = npub.replace(/^#?\/p\//, '').replace(/^nostr:/, '');
-        window.location.hash = `/p/${cleanNpub}`;
+    
+    // Clear previous error
+    errorDiv.textContent = '';
+    input.classList.remove('error');
+    
+    // Validate input
+    if (!npub) {
+        errorDiv.textContent = 'Please enter a npub';
+        input.classList.add('error');
+        return;
     }
+    
+    // Basic npub format validation
+    const cleanNpub = npub.replace(/^#?\/p\//, '').replace(/^nostr:/, '');
+    if (!cleanNpub.startsWith('npub1') || cleanNpub.length !== 63) {
+        errorDiv.textContent = 'Invalid npub format. It should start with "npub1" and be 63 characters long.';
+        input.classList.add('error');
+        return;
+    }
+    
+    // If validation passes, navigate to profile
+    window.location.hash = `/p/${cleanNpub}`;
 }
 
 // Copy profile URL to clipboard
