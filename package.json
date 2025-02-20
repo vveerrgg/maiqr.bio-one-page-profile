@@ -3,12 +3,15 @@
   "version": "1.0.0",
   "description": "MaiQR.bio - One Page Profile",
   "main": "app.js",
+  "type": "module",
   "scripts": {
     "start": "serve -s .",
     "deploy": "gh-pages -d ."
   },
   "dependencies": {
-    "nostr-crypto-utils": "^0.4.15"
+    "nostr-crypto-utils": "^0.4.15",
+    "qrcode-generator": "^1.4.4",
+    "buffer": "^6.0.3"
   },
   "devDependencies": {
     "gh-pages": "^6.1.1",

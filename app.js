@@ -121,6 +121,8 @@ class Router {
     }
 }
 
+import { nostrProfileFetcher } from './js/nostr-utils.js';
+
 // Views
 const views = {
     home: () => `
@@ -164,66 +166,112 @@ const views = {
             return views.notFound();
         }
         
-        // Generate QR code after the view is rendered
-        setTimeout(() => {
-            const qrContainer = document.getElementById('qr-modal-content');
-            if (qrContainer && window.QRCode) {
-                qrContainer.innerHTML = ''; // Clear existing content
-                new QRCode(qrContainer, {
-                    text: `nostr:${npub}`,
-                    width: 256,
-                    height: 256,
-                    colorDark: getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim(),
-                    colorLight: getComputedStyle(document.documentElement).getPropertyValue('--card-background').trim(),
-                    correctLevel: QRCode.CorrectLevel.H
-                });
-            }
-        }, 0);
-
-        return `
+        // Show loading state
+        const view = `
             <div class="container">
-                <div class="profile-card">
+                <div class="profile-content loading">
                     <div class="profile-header">
-                        <img src="assets/imgs/default-avatar.svg" alt="Profile" class="profile-avatar">
+                        <div class="profile-image-container">
+                            <img src="assets/imgs/default-avatar.svg" alt="Profile" class="profile-image" />
+                        </div>
                         <div class="profile-info">
-                            <h1 class="profile-name profile-placeholder">Satoshi Nakamoto</h1>
-                            <a href="#" class="profile-website profile-placeholder">https://bitcoin.org</a>
-                            <p class="profile-bio profile-placeholder">Creator of Bitcoin. Focused on decentralization, cryptography, and digital currencies. Building tools for financial freedom.</p>
+                            <h1 class="profile-name">Loading...</h1>
+                            <p class="profile-bio">Loading profile information...</p>
                         </div>
                     </div>
-                    <div class="profile-actions">
-                        <a href="#/" class="back-link">← Back to Home</a>
-                        <div class="action-buttons">
-                            <button class="qr-code-btn" onclick="toggleQRModal()">
-                                <i class="fas fa-qrcode"></i>
-                                <span>Show QR Code</span>
-                            </button>
-                            <button class="copy-url-btn" onclick="copyProfileUrl()">
-                                <i class="fas fa-copy"></i>
-                                <span class="copy-text">Copy maiqr.bio Profile URL</span>
+                    <div class="profile-details">
+                        <div class="detail-group">
+                            <label>Nostr Address</label>
+                            <code class="npub-display">${npub}</code>
+                            <button onclick="copyProfileUrl()" class="copy-button">
+                                <i class="fas fa-copy"></i> Copy URL
                             </button>
                         </div>
+                    </div>
+                    <div id="qr-container">
+                        <button onclick="toggleQRModal()" class="qr-button">
+                            <i class="fas fa-qrcode"></i> Show QR Code
+                        </button>
                     </div>
                 </div>
             </div>
-
-            <!-- QR Code Modal -->
             <div id="qr-modal" class="modal">
                 <div class="modal-content">
-                    <div class="modal-header">
-                        <h2>Scan QR Code</h2>
-                        <button onclick="toggleQRModal()" class="modal-close">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div id="qr-modal-content" class="modal-body"></div>
-                    <div class="modal-footer">
-                        <p class="modal-note">Scan to view profile in a Nostr client</p>
-                    </div>
+                    <span class="close" onclick="toggleQRModal()">&times;</span>
+                    <div id="qr-modal-content"></div>
                 </div>
             </div>
         `;
-    }
+        
+        // After view is rendered, fetch profile data
+        setTimeout(async () => {
+            try {
+                const profile = await nostrProfileFetcher.fetchProfile(npub);
+                
+                // Update profile image
+                const profileImage = document.querySelector('.profile-image');
+                if (profile.picture) {
+                    profileImage.src = profile.picture;
+                }
+                
+                // Update name and bio
+                document.querySelector('.profile-name').textContent = 
+                    `${profile.displayName} ${profile.name ? `• @${profile.name}` : ''}`;
+                document.querySelector('.profile-bio').textContent = 
+                    profile.about || 'No bio available';
+                
+                // Add additional profile details if available
+                const detailsContainer = document.querySelector('.profile-details');
+                
+                if (profile.nip05) {
+                    detailsContainer.insertAdjacentHTML('beforeend', `
+                        <div class="detail-group">
+                            <label>Verified As</label>
+                            <code>${profile.nip05}</code>
+                        </div>
+                    `);
+                }
+                
+                if (profile.lightning) {
+                    detailsContainer.insertAdjacentHTML('beforeend', `
+                        <div class="detail-group">
+                            <label>Lightning Address</label>
+                            <code>${profile.lightning}</code>
+                        </div>
+                    `);
+                }
+                
+                if (profile.website) {
+                    detailsContainer.insertAdjacentHTML('beforeend', `
+                        <div class="detail-group">
+                            <label>Website</label>
+                            <a href="${profile.website}" target="_blank" rel="noopener noreferrer">${profile.website}</a>
+                        </div>
+                    `);
+                }
+                
+                // Remove loading state
+                document.querySelector('.profile-content').classList.remove('loading');
+                
+            } catch (error) {
+                console.error('Failed to fetch profile:', error);
+                document.querySelector('.profile-bio').textContent = 
+                    'Failed to load profile information. Please try again later.';
+                document.querySelector('.profile-content').classList.remove('loading');
+            }
+            
+            // Generate QR code
+            const qrContainer = document.getElementById('qr-modal-content');
+            if (qrContainer) {
+                const qr = qrcode(0, 'L');
+                qr.addData(`nostr:${npub}`);
+                qr.make();
+                qrContainer.innerHTML = qr.createImgTag(5);
+            }
+        }, 0);
+        
+        return view;
+    },
 };
 
 // Handle npub form submission
