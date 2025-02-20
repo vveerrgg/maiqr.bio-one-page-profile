@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>maiqr.bio</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nostr-tools/lib/nostr.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <header class="header" role="banner">
+        <a href="#/" class="header-logo" aria-label="Home">maiqr.bio</a>
+        <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+            <i class="fas fa-moon" aria-hidden="true"></i>
+        </button>
+    </header>
+
+    <div id="app">
+        <div class="container">
+            <div id="profile-container">
+                <div class="profile-header">
+                    <img id="profile-picture" src="" alt="Profile Picture" class="profile-pic">
+                    <h1 id="profile-name"></h1>
+                    <p id="profile-npub" class="npub"></p>
+                </div>
+                
+                <div class="profile-content">
+                    <p id="profile-about"></p>
+                    <div id="qr-code"></div>
+                </div>
+
+                <div class="social-links" id="social-links">
+                    <!-- Social links will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

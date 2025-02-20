@@ -1,0 +1,9 @@
+{
+    "name": "maiqr.bio",
+    "short_name": "maiqr.bio",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#000000",
+    "description": "maiqr.bio profile pages"
+}
