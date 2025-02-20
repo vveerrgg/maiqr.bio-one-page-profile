@@ -153,6 +153,45 @@
    - Use semantic color variables
    - Support system theme preferences
 
+### Common Pitfalls and Solutions
+
+1. **Theme Initialization**
+   - ❌ Don't initialize theme in multiple places (e.g., both router and DOMContentLoaded)
+   - ✅ Use a single source of truth (AppState) for theme initialization
+   - ✅ Initialize theme before other components load
+
+2. **CSS vs JavaScript Theme Control**
+   - ❌ Don't override CSS variables with JavaScript unless absolutely necessary
+   - ✅ Let CSS handle theme colors through CSS variables
+   - ✅ Use JavaScript only for toggling the theme attribute
+
+3. **Background Color Application**
+   - ❌ Don't rely only on body background-color
+   - ✅ Apply background-color to both html and body elements
+   - ✅ Ensure proper color inheritance through the DOM tree
+
+4. **Loading State Management**
+   - ❌ Don't show unstyled content during initialization
+   - ✅ Use a loading class on the html element
+   - ✅ Remove loading class only after theme is fully initialized
+
+### Debugging Theme Issues
+1. Check for CSS variable overrides in JavaScript
+2. Verify theme attribute is being set correctly
+3. Ensure proper CSS variable inheritance
+4. Test theme transitions with dev tools
+5. Verify system theme preference detection
+
+### Theme Testing Checklist
+- [ ] Initial load matches system preference
+- [ ] Theme toggle works in both directions
+- [ ] No flash of unstyled content
+- [ ] Smooth transitions on theme change
+- [ ] Background color applies to full viewport
+- [ ] No color inconsistencies between components
+- [ ] System theme changes are detected
+- [ ] Theme persists across page reloads
+
 ### Theme Components
 - Header and navigation
 - Forms and inputs
