@@ -22,51 +22,11 @@ const AppState = {
         // Get npub from URL if on maiqr.bio
         const path = window.location.pathname;
         const npubMatch = path.match(/\/p\/(npub[a-zA-Z0-9]+)/);
-        const npub = npubMatch ? npubMatch[1] : config.profile.npub;
-
-        // Update profile information
-        document.getElementById('profile-name').textContent = config.profile.name;
-        document.getElementById('profile-about').textContent = config.profile.about;
-        document.getElementById('profile-picture').src = config.profile.picture;
         
-        if (npub) {
-            document.getElementById('profile-npub').textContent = npub;
-            
-            // Generate QR code
-            const qrContainer = document.getElementById('qr-code');
-            QRCode.toCanvas(qrContainer, `nostr:${npub}`, {
-                width: 256,
-                margin: 4,
-                color: {
-                    dark: config.theme.textColor,
-                    light: '#ffffff'
-                }
-            });
-
-            // Use nostr-crypto-utils for profile data fetching
-            try {
-                const { decodeNpub } = await import('nostr-crypto-utils');
-                const pubkey = decodeNpub(npub);
-                
-                // TODO: Add profile fetching logic using nostr-crypto-utils
-                // This will be implemented once we have the proper relay connection setup
-                
-            } catch (error) {
-                console.error('Error decoding npub:', error);
-            }
+        if (npubMatch) {
+            // If we have an npub in the URL, navigate to its profile
+            window.location.hash = `#/p/${npubMatch[1]}`;
         }
-
-        // Add social links
-        const socialLinksContainer = document.getElementById('social-links');
-        config.socialLinks.forEach(link => {
-            const a = document.createElement('a');
-            a.href = link.url;
-            a.className = 'social-link';
-            a.textContent = link.name;
-            a.target = '_blank';
-            a.rel = 'noopener noreferrer';
-            socialLinksContainer.appendChild(a);
-        });
     },
     
     async initializeTheme() {
@@ -162,6 +122,23 @@ const views = {
     
     profile: () => {
         const npub = window.location.hash.replace('#/p/', '');
+        
+        // Generate QR code after the view is rendered
+        setTimeout(() => {
+            const qrContainer = document.getElementById('qr-modal-content');
+            if (qrContainer && window.QRCode) {
+                qrContainer.innerHTML = ''; // Clear existing content
+                new QRCode(qrContainer, {
+                    text: `nostr:${npub}`,
+                    width: 256,
+                    height: 256,
+                    colorDark: getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim(),
+                    colorLight: getComputedStyle(document.documentElement).getPropertyValue('--card-background').trim(),
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+            }
+        }, 0);
+
         return `
             <div class="container">
                 <div class="profile-card">
@@ -175,10 +152,32 @@ const views = {
                     </div>
                     <div class="profile-actions">
                         <a href="#/" class="back-link">← Back to Home</a>
-                        <button class="copy-url-btn" onclick="copyProfileUrl()">
-                            <i class="fas fa-copy"></i>
-                            <span class="copy-text">Copy maiqr.bio Profile URL</span>
+                        <div class="action-buttons">
+                            <button class="qr-code-btn" onclick="toggleQRModal()">
+                                <i class="fas fa-qrcode"></i>
+                                <span>Show QR Code</span>
+                            </button>
+                            <button class="copy-url-btn" onclick="copyProfileUrl()">
+                                <i class="fas fa-copy"></i>
+                                <span class="copy-text">Copy maiqr.bio Profile URL</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QR Code Modal -->
+            <div id="qr-modal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Scan QR Code</h2>
+                        <button onclick="toggleQRModal()" class="modal-close">
+                            <i class="fas fa-times"></i>
                         </button>
+                    </div>
+                    <div id="qr-modal-content" class="modal-body"></div>
+                    <div class="modal-footer">
+                        <p class="modal-note">Scan to view profile in a Nostr client</p>
                     </div>
                 </div>
             </div>
@@ -221,6 +220,21 @@ async function copyProfileUrl() {
         }, 2000);
     } catch (err) {
         console.error('Failed to copy URL:', err);
+    }
+}
+
+// QR Code Modal Toggle
+function toggleQRModal() {
+    const modal = document.getElementById('qr-modal');
+    modal.classList.toggle('show');
+    
+    // Close modal when clicking outside
+    if (modal.classList.contains('show')) {
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                toggleQRModal();
+            }
+        };
     }
 }
 
