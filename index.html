@@ -1,12 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" class="loading">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>maiqr.bio Profile</title>
+    <title>MaiQR.bio</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
     <header class="header">
@@ -16,8 +15,35 @@
         </button>
     </header>
 
-    <main id="app"></main>
+    <main id="app">
+        <div class="container">
+            <div class="profile-card">
+                <div class="profile-content">
+                    <div class="profile-image-container">
+                        <img id="profile-image" class="profile-image" src="placeholder-avatar.png" alt="Profile Picture">
+                    </div>
+                    <div class="profile-info">
+                        <h1 id="profile-name" class="profile-name">Loading...</h1>
+                        <a id="profile-website" class="profile-website" href="#" target="_blank"></a>
+                        <p id="profile-about" class="profile-about"></p>
+                        <div class="action-buttons">
+                            <a href="/" class="btn"><i class="fas fa-arrow-left"></i> Back to Home</a>
+                            <button id="show-qr" class="btn"><i class="fas fa-qrcode"></i> Show QR Code</button>
+                            <button id="copy-url" class="btn"><i class="fas fa-copy"></i> Copy maiqr.bio Profile URL</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
 
-    <script src="app.js"></script>
+    <!-- Load dependencies first -->
+    <script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>
+    <script src="https://unpkg.com/buffer@6.0.3/index.js"></script>
+
+    <!-- Load our app -->
+    <script type="module" src="js/nostr-bech32.js"></script>
+    <script type="module" src="js/nostr-utils.js"></script>
+    <script type="module" src="app.js"></script>
 </body>
 </html>

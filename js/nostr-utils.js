@@ -1,67 +1,165 @@
-import { nip19 } from 'nostr-crypto-utils';
+// Nostr Profile Fetcher with Round-Robin Relay Support
+import { decodeNpub } from './nostr-bech32.js';
+import { NostrWebSocket } from './nostr-websocket.js';
 
-// List of relay APIs to try in order
-const RELAY_APIS = [
-    'https://api.primal.net/v1/profile/',
-    'https://relay.damus.io/',
-    'https://relay.snort.social/'
-];
+console.log('Loading nostr-utils.js');
 
-export class NostrProfileFetcher {
-    constructor() {
-        this.currentRelayIndex = 0;
-    }
+export const nostrProfileFetcher = {
+    relays: [
+        'wss://relay.damus.io',
+        'wss://relay.snort.social',
+        'wss://nos.lol'
+    ],
+    currentRelayIndex: 0,
+    relayConnections: new Map(),
+    activeSubscriptions: new Map(),
 
     async fetchProfile(npub) {
-        const { data: pubkey } = nip19.decode(npub);
-        const errors = [];
-
-        // Try each relay in sequence until we get a successful response
-        for (let i = 0; i < RELAY_APIS.length; i++) {
+        console.log('fetchProfile() called with npub:', npub);
+        let lastError = null;
+        
+        // Try each relay in sequence
+        for (let i = 0; i < this.relays.length; i++) {
+            const relay = this.relays[this.currentRelayIndex];
+            console.log(`Attempting relay ${i + 1}/${this.relays.length}:`, relay);
+            
             try {
-                const relayUrl = RELAY_APIS[this.currentRelayIndex];
-                const response = await fetch(`${relayUrl}${pubkey}`);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                const profile = await this.fetchFromRelay(npub, relay);
+                if (profile) {
+                    console.log('Successfully fetched profile from relay:', relay);
+                    return this.normalizeProfileData(profile);
                 }
-                
-                const data = await response.json();
-                
-                // Move to next relay for next request (round-robin)
-                this.currentRelayIndex = (this.currentRelayIndex + 1) % RELAY_APIS.length;
-                
-                return this.normalizeProfileData(data);
             } catch (error) {
-                errors.push(`Relay ${RELAY_APIS[this.currentRelayIndex]}: ${error.message}`);
-                this.currentRelayIndex = (this.currentRelayIndex + 1) % RELAY_APIS.length;
+                console.warn(`Failed to fetch from relay ${relay}:`, error);
+                lastError = error;
+                // Move to next relay
+                this.currentRelayIndex = (this.currentRelayIndex + 1) % this.relays.length;
             }
         }
-
-        throw new Error(`Failed to fetch profile from all relays: ${errors.join(', ')}`);
-    }
-
-    normalizeProfileData(data) {
-        // Handle different relay response formats
-        const content = data.content || data;
         
-        return {
-            picture: content.picture ? this.getOptimizedImageUrl(content.picture) : null,
-            displayName: content.display_name || content.name || 'Unknown',
-            name: content.name || 'unknown',
-            about: content.about || '',
-            lightning: content.lud16 || content.lud06 || null,
-            nip05: content.nip05 || null,
-            banner: content.banner ? this.getOptimizedImageUrl(content.banner) : null,
-            website: content.website || null
+        // If we get here, all relays failed
+        console.error('All relays failed to fetch profile');
+        throw new Error('Failed to fetch profile from all relays: ' + lastError?.message);
+    },
+    
+    async fetchFromRelay(npub, relay) {
+        console.log('fetchFromRelay() called with npub:', npub);
+        console.log('Using relay:', relay);
+        
+        try {
+            console.log('Decoding npub...');
+            const pubkey = decodeNpub(npub);
+            if (!pubkey) {
+                throw new Error('Invalid npub format');
+            }
+            console.log('Decoded pubkey:', pubkey);
+            
+            // Get or create WebSocket connection
+            let ws = this.relayConnections.get(relay);
+            if (!ws) {
+                ws = new NostrWebSocket(relay);
+                this.relayConnections.set(relay, ws);
+            }
+            
+            // Cleanup any existing subscription for this npub
+            const existingUnsub = this.activeSubscriptions.get(npub);
+            if (existingUnsub) {
+                existingUnsub();
+                this.activeSubscriptions.delete(npub);
+            }
+            
+            // Create a promise that will resolve with the profile data
+            const profilePromise = new Promise((resolve, reject) => {
+                let timeout = setTimeout(() => {
+                    reject(new Error('Timeout waiting for profile'));
+                }, 5000);
+                
+                const unsubscribe = ws.subscribe([
+                    {
+                        kinds: [0],
+                        authors: [pubkey]
+                    }
+                ], (message) => {
+                    if (message[0] === 'EVENT' && message[2].kind === 0) {
+                        clearTimeout(timeout);
+                        try {
+                            const content = JSON.parse(message[2].content);
+                            resolve(content);
+                            // Cleanup after successful fetch
+                            unsubscribe();
+                            this.activeSubscriptions.delete(npub);
+                        } catch (error) {
+                            reject(new Error('Invalid profile data'));
+                        }
+                    } else if (message[0] === 'EOSE') {
+                        clearTimeout(timeout);
+                        reject(new Error('Profile not found'));
+                    }
+                });
+                
+                // Store the unsubscribe function
+                this.activeSubscriptions.set(npub, unsubscribe);
+            });
+            
+            const profile = await profilePromise;
+            return profile;
+            
+        } catch (error) {
+            console.error('Error in fetchFromRelay:', error);
+            throw error;
+        }
+    },
+    
+    normalizeProfileData(rawProfile) {
+        console.log('normalizeProfileData() called with:', rawProfile);
+        // Extract common fields and normalize them
+        const normalized = {
+            name: rawProfile.name || null,
+            displayName: rawProfile.display_name || rawProfile.name || 'Anonymous',
+            about: rawProfile.about || rawProfile.description || null,
+            picture: this.validateImageUrl(rawProfile.picture || rawProfile.avatar || rawProfile.image),
+            nip05: rawProfile.nip05 || null,
+            lightning: rawProfile.lightning || rawProfile.lud16 || null,
+            website: this.validateUrl(rawProfile.website || rawProfile.url || null)
         };
+        console.log('Normalized profile data:', normalized);
+        return normalized;
+    },
+    
+    validateImageUrl(url) {
+        console.log('validateImageUrl() called with:', url);
+        if (!url) return null;
+        try {
+            const parsed = new URL(url);
+            return parsed.toString();
+        } catch (error) {
+            console.warn('Invalid image URL:', error);
+            return null;
+        }
+    },
+    
+    validateUrl(url) {
+        console.log('validateUrl() called with:', url);
+        if (!url) return null;
+        try {
+            const parsed = new URL(url);
+            return parsed.toString();
+        } catch (error) {
+            console.warn('Invalid URL:', error);
+            return null;
+        }
+    },
+    
+    // Cleanup method to be called when navigating away or closing
+    cleanup() {
+        for (const [_, unsubscribe] of this.activeSubscriptions) {
+            unsubscribe();
+        }
+        this.activeSubscriptions.clear();
+        
+        for (const [_, ws] of this.relayConnections) {
+            ws.close();
+        }
+        this.relayConnections.clear();
     }
-
-    getOptimizedImageUrl(url) {
-        // Use Primal's CDN for better image loading
-        return `https://primal.b-cdn.net/media-cache?s=m&a=1&u=${encodeURIComponent(url)}`;
-    }
-}
-
-// Export singleton instance
-export const nostrProfileFetcher = new NostrProfileFetcher();
+};

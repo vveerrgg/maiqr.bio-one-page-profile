@@ -1,3 +1,14 @@
+// Import dependencies
+import { nostrProfileFetcher } from './js/nostr-utils.js';
+
+console.log('Starting app initialization...');
+
+// Make Buffer available globally for nostr-crypto-utils
+if (typeof window.Buffer === 'undefined' && typeof Buffer !== 'undefined') {
+    console.log('Setting up Buffer globally');
+    window.Buffer = Buffer;
+}
+
 // App State Management
 const AppState = {
     isInitialized: false,
@@ -5,131 +16,156 @@ const AppState = {
     router: null,
     
     async initialize() {
-        if (this.isInitialized) return;
+        console.log('AppState.initialize() called');
+        if (this.isInitialized) {
+            console.log('App already initialized, skipping...');
+            return;
+        }
         
-        // Initialize theme first
-        await this.initializeTheme();
-        
-        // Initialize router
-        this.initializeRouter();
-        
-        // Mark as initialized
-        this.isInitialized = true;
-        
-        // Remove loading state
-        document.documentElement.classList.remove('loading');
-        
-        // Get npub from URL if on maiqr.bio
-        const path = window.location.pathname;
-        const npubMatch = path.match(/\/p\/(npub[a-zA-Z0-9]+)/);
-        
-        if (npubMatch) {
-            // If we have an npub in the URL, navigate to its profile
-            window.location.hash = `#/p/${npubMatch[1]}`;
+        try {
+            // Initialize theme first
+            console.log('Initializing theme...');
+            await this.initializeTheme();
+            console.log('Theme initialized successfully');
+            
+            // Initialize router
+            console.log('Initializing router...');
+            this.initializeRouter();
+            console.log('Router initialized successfully');
+            
+            // Mark as initialized
+            this.isInitialized = true;
+            console.log('App initialization complete');
+            
+            // Remove loading state
+            document.documentElement.classList.remove('loading');
+            
+            // Get npub from URL if on maiqr.bio
+            const path = window.location.pathname;
+            const npubMatch = path.match(/\/p\/(npub[a-zA-Z0-9]+)/);
+            
+            if (npubMatch) {
+                console.log('Found npub in URL:', npubMatch[1]);
+                // If we have an npub in the URL, navigate to its profile
+                window.location.hash = `#/p/${npubMatch[1]}`;
+            }
+        } catch (error) {
+            console.error('Error during app initialization:', error);
         }
     },
     
     async initializeTheme() {
+        console.log('initializeTheme() called');
         // Get system preference
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        console.log('System prefers dark mode:', prefersDark);
         
         // Get saved theme or use system preference
         this.currentTheme = localStorage.getItem('theme') || (prefersDark ? 'dark' : 'light');
+        console.log('Current theme:', this.currentTheme);
         
         // Apply theme
         document.documentElement.setAttribute('data-theme', this.currentTheme);
-        this.updateThemeIcon(this.currentTheme);
+        updateThemeIcon(this.currentTheme);
         
         // Listen for system theme changes
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            console.log('System theme changed, matches dark:', e.matches);
             if (!localStorage.getItem('theme')) {
                 this.currentTheme = e.matches ? 'dark' : 'light';
                 document.documentElement.setAttribute('data-theme', this.currentTheme);
-                this.updateThemeIcon(this.currentTheme);
+                updateThemeIcon(this.currentTheme);
             }
         });
     },
     
     initializeRouter() {
+        console.log('initializeRouter() called');
         this.router = new Router([
             { pattern: '^#/$', view: views.home },
             { pattern: '^#/p/.*', view: views.profile },
             { pattern: '^#/404$', view: views.notFound },
             { pattern: '*', view: views.home }
         ]);
+        console.log('Router initialized with routes');
     },
     
     toggleTheme() {
-        this.currentTheme = this.currentTheme === 'light' ? 'dark' : 'light';
-        document.documentElement.setAttribute('data-theme', this.currentTheme);
-        localStorage.setItem('theme', this.currentTheme);
-        this.updateThemeIcon(this.currentTheme);
-    },
-    
-    updateThemeIcon(theme) {
-        const icon = document.querySelector('.theme-toggle i');
-        if (icon) {
-            if (theme === 'light') {
-                icon.classList.remove('fa-sun');
-                icon.classList.add('fa-moon');
-            } else {
-                icon.classList.remove('fa-moon');
-                icon.classList.add('fa-sun');
-            }
-        }
+        console.log('toggleTheme() called');
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateThemeIcon(newTheme);
+        console.log('Theme toggled to:', newTheme);
     }
 };
 
 // Router Class
 class Router {
     constructor(routes) {
+        console.log('Router constructor called');
         this.routes = routes;
         this.handleRoute = this.handleRoute.bind(this);
         
         // Handle hash changes
         window.addEventListener('hashchange', this.handleRoute);
+        console.log('Hash change listener added');
         this.handleRoute(); // Initial route handling
     }
     
     handleRoute() {
+        console.log('handleRoute() called');
         const hash = window.location.hash || '#/';
+        console.log('Current hash:', hash);
         
         // Special handling for profile routes
         if (hash.startsWith('#/p/')) {
             const npub = hash.replace('#/p/', '');
+            console.log('Processing profile route for npub:', npub);
             if (!this.isValidNpub(npub)) {
+                console.log('Invalid npub, redirecting to 404');
                 this.navigate('/404');
                 return;
             }
         }
         
         const route = this.routes.find(r => hash.match(r.pattern)) || this.routes.find(r => r.pattern === '*');
+        console.log('Found matching route:', route?.pattern);
         
         if (route) {
             const app = document.getElementById('app');
+            if (!app) {
+                console.error('Could not find app element!');
+                return;
+            }
+            console.log('Rendering view for route:', route.pattern);
             app.innerHTML = route.view();
             route.afterRender && route.afterRender();
         }
     }
     
     navigate(path) {
+        console.log('navigate() called with path:', path);
         window.location.hash = path;
     }
     
     isValidNpub(npub) {
-        return npub && npub.startsWith('npub1') && npub.length === 63;
+        const isValid = npub && npub.startsWith('npub1') && npub.length === 63;
+        console.log('Validating npub:', npub, 'Result:', isValid);
+        return isValid;
     }
 }
-
-import { nostrProfileFetcher } from './js/nostr-utils.js';
 
 // Views
 const views = {
     home: () => `
         <div class="container">
-            <h1>MaiQR.bio</h1>
-            <p>To get started, visit <code>#/p/npub...</code> to see a profile, or enter an npub to create one.</p>
             <div class="npub-form-container">
+            <h1 style="margin-bottom: -.5rem;">Lazy-Links for Nostr Profiles</h1>
+            <h3 style="margin: -2rem, 0">... without any of the platform specific hassles</h3>
+            <p>To get started, visit <code>#/p/npub...</code> to see a profile, or enter an npub to create one.</p>
+                <hr style="margin: 1rem 0;">
                 <div class="npub-form">
                     <div class="input-group">
                         <input type="text" id="npub-input" placeholder="Enter npub..." />
@@ -271,8 +307,16 @@ const views = {
         }, 0);
         
         return view;
-    },
+    }
 };
+
+// Helper functions
+function updateThemeIcon(theme) {
+    const themeIcon = document.querySelector('.theme-toggle i');
+    if (themeIcon) {
+        themeIcon.className = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
+    }
+}
 
 // Handle npub form submission
 function handleNpubSubmit() {
@@ -309,22 +353,11 @@ async function copyProfileUrl() {
     const url = window.location.href;
     try {
         await navigator.clipboard.writeText(url);
-        const btn = document.querySelector('.copy-url-btn');
-        const text = btn.querySelector('.copy-text');
-        const icon = btn.querySelector('i');
-        
-        // Update button state
-        btn.classList.add('copied');
-        text.textContent = 'Copied!';
-        icon.classList.remove('fa-copy');
-        icon.classList.add('fa-check');
-        
-        // Reset button state after 2 seconds
+        const copyButton = document.querySelector('.copy-button');
+        const originalText = copyButton.innerHTML;
+        copyButton.innerHTML = '<i class="fas fa-check"></i> Copied!';
         setTimeout(() => {
-            btn.classList.remove('copied');
-            text.textContent = 'Copy Profile URL';
-            icon.classList.remove('fa-check');
-            icon.classList.add('fa-copy');
+            copyButton.innerHTML = originalText;
         }, 2000);
     } catch (err) {
         console.error('Failed to copy URL:', err);
@@ -334,24 +367,29 @@ async function copyProfileUrl() {
 // QR Code Modal Toggle
 function toggleQRModal() {
     const modal = document.getElementById('qr-modal');
-    modal.classList.toggle('show');
-    
-    // Close modal when clicking outside
-    if (modal.classList.contains('show')) {
-        modal.onclick = (e) => {
-            if (e.target === modal) {
-                toggleQRModal();
-            }
-        };
+    if (modal) {
+        modal.classList.toggle('show');
     }
 }
 
+// Make functions available globally
+window.handleNpubSubmit = handleNpubSubmit;
+window.copyProfileUrl = copyProfileUrl;
+window.toggleQRModal = toggleQRModal;
+
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    // Add theme toggle listener
-    const themeToggle = document.querySelector('.theme-toggle');
-    themeToggle.addEventListener('click', () => AppState.toggleTheme());
-    
-    // Initialize app
-    AppState.initialize();
+    console.log('DOMContentLoaded event fired');
+    try {
+        // Add theme toggle listener
+        const themeToggle = document.querySelector('.theme-toggle');
+        console.log('Theme toggle element found:', !!themeToggle);
+        themeToggle?.addEventListener('click', () => AppState.toggleTheme());
+        
+        // Initialize app
+        console.log('Starting AppState initialization...');
+        AppState.initialize();
+    } catch (error) {
+        console.error('Error during DOM ready initialization:', error);
+    }
 });

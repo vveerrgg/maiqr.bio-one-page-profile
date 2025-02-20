@@ -1,12 +1,12 @@
 :root {
     --primary-color: #2d3436;
     --secondary-color: #0984e3;
-    --background-color: #f5f6fa;
-    --card-background: #ffffff;
-    --text-color: #2d3436;
+    --background-color: #f5f5f5;
+    --card-background: #fff;
+    --text-color: #333;
     --header-bg: #ffffff;
     --header-text: #2d3436;
-    --border-color: rgba(0, 0, 0, 0.1);
+    --border-color: #ddd;
     --breakpoint-sm: 640px;   /* Small devices (phones) */
     --breakpoint-md: 768px;   /* Medium devices (tablets) */
     --breakpoint-lg: 1024px;  /* Large devices (laptops) */
@@ -18,10 +18,10 @@
     --secondary-color: #74b9ff;
     --background-color: #1a1a1a;
     --card-background: #2d2d2d;
-    --text-color: #ffffff;
+    --text-color: #e0e0e0;
     --header-bg: #2d2d2d;
     --header-text: #ffffff;
-    --border-color: rgba(255, 255, 255, 0.1);
+    --border-color: #404040;
 }
 
 * {
@@ -37,11 +37,11 @@ html {
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background-color: var(--background-color);
     color: var(--text-color);
     line-height: 1.6;
-    min-height: 100%;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
     margin: 0;
@@ -49,11 +49,115 @@ body {
 }
 
 .container {
-    max-width: 680px;
     width: 100%;
-    margin: 60px auto 0;
-    padding: 20px;
-    flex: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.profile-card {
+    background: var(--card-background);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    margin: 1rem;
+    overflow: hidden;
+}
+
+@media (min-width: 768px) {
+    .profile-content {
+        display: flex;
+        align-items: flex-start;
+        gap: 2rem;
+    }
+
+    .profile-image-container {
+        flex: 0 0 auto;
+    }
+
+    .profile-info {
+        flex: 1;
+        padding-top: 1rem;
+    }
+}
+
+.profile-image {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 1.5rem;
+}
+
+.profile-name {
+    font-size: 2rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: var(--text-color);
+}
+
+.profile-website {
+    color: #3498db;
+    text-decoration: none;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    display: inline-block;
+}
+
+.profile-website:hover {
+    text-decoration: underline;
+}
+
+.profile-about {
+    font-size: 1.2rem;
+    line-height: 1.6;
+    margin: 1.5rem 0;
+    color: var(--text-color);
+    opacity: 0.9;
+    font-style: italic;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+}
+
+.btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.btn i {
+    margin-right: 0.5rem;
+}
+
+#theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.5rem;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 1.5rem;
 }
 
 /* Header Styles */
@@ -112,12 +216,28 @@ body {
     margin-bottom: 2rem;
 }
 
-.profile-pic {
-    width: 128px;
-    height: 128px;
-    border-radius: 50%;
+.profile-image-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
     margin-bottom: 1rem;
+    width: 100%;
+}
+
+.profile-image {
+    width: 100%;
+    max-width: min(300px, 30vw);
+    height: auto;
+    max-height: min(300px, 30vh);
+    border-radius: 50%;
     object-fit: cover;
+    aspect-ratio: 1;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.profile-image:hover {
+    transform: scale(1.05);
 }
 
 .profile-name {
@@ -698,4 +818,25 @@ html:not(.loading):before {
 
 .not-found .button:hover {
     background-color: var(--secondary-color);
+}
+
+#app {
+    margin-top: 8dvh;
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    #app {
+        margin-top: 8dvh;
+    }
+    
+    .profile-content {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .profile-image-container {
+        margin-bottom: 1.5rem;
+    }
 }
