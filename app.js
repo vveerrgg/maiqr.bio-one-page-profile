@@ -163,7 +163,7 @@ const views = {
         <div class="container">
             <div class="npub-form-container">
             <h1 style="margin-bottom: -.5rem;">Lazy-Links for Nostr Profiles</h1>
-            <h3 style="margin: -2rem, 0">... without any of the platform specific hassles</h3>
+            <h3 style="margin: -2rem, 0">... with fewer hassles</h3>
             <p>To get started, visit <code>#/p/npub...</code> to see a profile, or enter an npub to create one.</p>
                 <hr style="margin: 1rem 0;">
                 <div class="npub-form">
