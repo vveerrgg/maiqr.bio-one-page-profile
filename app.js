@@ -54,6 +54,7 @@ const AppState = {
         this.router = new Router([
             { pattern: '^#/$', view: views.home },
             { pattern: '^#/p/.*', view: views.profile },
+            { pattern: '^#/404$', view: views.notFound },
             { pattern: '*', view: views.home }
         ]);
     },
@@ -92,6 +93,16 @@ class Router {
     
     handleRoute() {
         const hash = window.location.hash || '#/';
+        
+        // Special handling for profile routes
+        if (hash.startsWith('#/p/')) {
+            const npub = hash.replace('#/p/', '');
+            if (!this.isValidNpub(npub)) {
+                this.navigate('/404');
+                return;
+            }
+        }
+        
         const route = this.routes.find(r => hash.match(r.pattern)) || this.routes.find(r => r.pattern === '*');
         
         if (route) {
@@ -103,6 +114,10 @@ class Router {
     
     navigate(path) {
         window.location.hash = path;
+    }
+    
+    isValidNpub(npub) {
+        return npub && npub.startsWith('npub1') && npub.length === 63;
     }
 }
 
@@ -120,6 +135,22 @@ const views = {
                     </div>
                     <div id="npub-error" class="error-message"></div>
                 </div>
+            </div>
+        </div>
+    `,
+    
+    notFound: () => `
+        <div class="container">
+            <div class="not-found">
+                <h1>404 - Page Not Found</h1>
+                <p>The profile you're looking for doesn't exist or the npub is invalid.</p>
+                <p>A valid npub should:</p>
+                <ul>
+                    <li>Start with "npub1"</li>
+                    <li>Be exactly 63 characters long</li>
+                    <li>Contain only letters and numbers</li>
+                </ul>
+                <a href="#/" class="button">Go Home</a>
             </div>
         </div>
     `,
