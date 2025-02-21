@@ -98,6 +98,7 @@ const AppState = {
         localStorage.setItem('theme', newTheme);
         updateThemeIcon(newTheme);
         console.log('Theme toggled to:', newTheme);
+        window.plausible('Theme Toggle', { props: { theme: newTheme } });
     }
 };
 
@@ -413,6 +414,7 @@ async function copyProfileUrl() {
         setTimeout(() => {
             copyButton.innerHTML = originalText;
         }, 2000);
+        window.plausible('Copy Profile URL');
     } catch (err) {
         console.error('Failed to copy URL:', err);
     }
@@ -422,7 +424,11 @@ async function copyProfileUrl() {
 function toggleQRModal() {
     const modal = document.getElementById('qr-modal');
     if (modal) {
+        const isShowing = !modal.classList.contains('show');
         modal.classList.toggle('show');
+        if (isShowing) {
+            window.plausible('View QR Code');
+        }
     }
 }
 
