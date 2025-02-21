@@ -205,6 +205,8 @@ const views = {
         // Show loading state
         const view = `
             <div class="container">
+
+                <!-- user profile based content -->                        
                 <div class="profile-content loading">
                     <div class="profile-header" style="display: flex; align-items: flex-start;">
                         <div class="profile-image-container" style="padding-top: 2dvh; margin-bottom: -4dvh;">
@@ -216,22 +218,26 @@ const views = {
                         <div class="profile-info" style="flex: 1; padding-top: 2dvh;">
                             <h1 class="profile-name">Loading...</h1>
                             <p class="profile-bio">Loading profile information...</p>
+
+                            <div class="website-section" style="margin-top: 2dvh; display: none;">Website: 
+                                <a href="#" target="_blank" rel="noopener noreferrer" class="website-link" style="font-size: 1.2em; text-decoration: none;"></a>
+                            </div>
                         </div>
-                        <hr style="margin-bottom: 2dvh;">
+
+                        <!-- nostr based content -->                        
+                        <hr style="margin-bottom: 2dvh; margin-top: 2dvh;">
                         <div class="detail-group">
                             <div style="margin-bottom: 1dvh;">
                                 <label>Nostr Address</label>
-                                <textarea class="npub-textarea" readonly onclick="this.select()">${npub}</textarea>
+                                <div style="display: flex; align-items: center; gap: 4dvw;">
+                                <textarea class="npub-textarea" readonly onclick="this.select()" style="height: 38px; resize: none; vertical-align: middle; padding-top: 8px;">${npub}</textarea>
+                                <button onclick="copyNpub()" class="copy-button" style="white-space: nowrap; height: 38px; vertical-align: middle; display: flex; align-items: center;">
+                            <i class="fas fa-copy"></i> Copy nPub
+                        </button>
+
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div id="qr-container" style="margin-top: 2dvh;">
-                        <button onclick="toggleQRModal()" class="qr-button">
-                            <i class="fas fa-qrcode"></i> Show QR Code
-                        </button>
-                        <button onclick="copyProfileUrl()" class="copy-button">
-                            <i class="fas fa-copy"></i> Copy URL
-                        </button>
                     </div>
                 </div>
             </div>
@@ -240,6 +246,11 @@ const views = {
                     <span class="close" onclick="toggleQRModal()">&times;</span>
                     <div id="qr-modal-content"></div>
                 </div>
+            </div>
+            <div class="info-section" style="margin: 4dvh auto 0; padding: 2dvh; background: var(--bg-secondary); border-radius: 8px; font-size: 0.9em; color: var(--text-secondary); max-width: 800px; width: calc(100% - 4dvh);">
+                <h3 style="margin-bottom: 1dvh;">About Nostr Verification</h3>
+                <p>A "<a href="https://github.com/nostr-protocol/nips/blob/master/05.md" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">Verified As</a>" address (NIP-05) on Nostr is similar to how email works - the same username can exist on different platforms. For example, "user@platform1.com" and "user@platform2.com" are different verifications.</p>
+                <p style="margin-top: 1dvh;">This means that while someone may be verified as "username@domain", they could potentially have different verifications on other domains. Always check the full verification address to confirm the specific platform where the verification was performed.</p>
             </div>
         `;
         
@@ -262,20 +273,23 @@ const views = {
                 
                 // Add additional profile details if available
                 const detailsContainer = document.querySelector('.profile-details');
-
+                
                 if (profile.website) {
-                    detailsContainer.insertAdjacentHTML('beforeend', `
-                        <div class="detail-group" style="margin-bottom: 2dvh;">
-                            <label>Website: </label>
-                            <a href="${profile.website}" target="_blank" rel="noopener noreferrer">${profile.website}</a>
-                        </div>
-                    `);
+                    const websiteSection = document.querySelector('.website-section');
+                    const websiteLink = document.querySelector('.website-link');
+                    websiteSection.style.display = 'block';
+                    websiteLink.href = profile.website;
+                    const displayUrl = profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '');
+                    websiteLink.textContent = displayUrl;
                 }
 
+                // Create flex container for verification and lightning
+                detailsContainer.insertAdjacentHTML('beforeend', '<div class="flex-container" style="display: flex; gap: 2dvh; margin-top: 2dvh;"></div>');
+                const flexContainer = document.querySelector('.flex-container');
 
                 if (profile.nip05) {
-                    detailsContainer.insertAdjacentHTML('beforeend', `
-                        <div class="detail-group">
+                    flexContainer.insertAdjacentHTML('beforeend', `
+                        <div class="detail-group" style="flex: 1;">
                             <label>Verified As: </label>
                             <code>${profile.nip05}</code>
                         </div>
@@ -283,14 +297,32 @@ const views = {
                 }
                 
                 if (profile.lightning) {
-                    detailsContainer.insertAdjacentHTML('beforeend', `
-                        <div class="detail-group">
+                    flexContainer.insertAdjacentHTML('beforeend', `
+                        <div class="detail-group" style="flex: 1;">
                             <label>Lightning Address: </label>
                             <code>${profile.lightning}</code>
                         </div>
                     `);
                 }
-                
+
+                // Add QR and Copy buttons after the flex container
+                detailsContainer.insertAdjacentHTML('beforeend', `
+                    <div id="qr-container" style="margin-top: 2dvh; display: flex; gap: 1dvh; flex-wrap: wrap;">
+                        <style>
+                            @media (max-width: 768px) {
+                                #qr-container {
+                                    justify-content: center;
+                                }
+                            }
+                        </style>
+                        <button onclick="toggleQRModal()" class="qr-button">
+                            <i class="fas fa-qrcode"></i> Show QR Code
+                        </button>
+                        <button onclick="copyProfileUrl()" class="copy-button">
+                            <i class="fas fa-copy"></i> Copy URL
+                        </button>
+                    </div>
+                `);
                 
                 // Remove loading state
                 document.querySelector('.profile-content').classList.remove('loading');
