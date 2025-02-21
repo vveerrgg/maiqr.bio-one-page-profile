@@ -232,7 +232,7 @@ const views = {
                                 <label>Nostr Address</label>
                                 <div style="display: flex; align-items: center; gap: 4dvw;">
                                 <textarea class="npub-textarea" readonly onclick="this.select()" style="height: 38px; resize: none; vertical-align: middle; padding-top: 8px;">${npub}</textarea>
-                                <button onclick="copyNpub()" class="copy-button" style="white-space: nowrap; height: 38px; vertical-align: middle; display: flex; align-items: center;">
+                                <button onclick="copyNpub()" class="copy-npub-button" style="white-space: nowrap; height: 38px; vertical-align: middle; display: flex; align-items: center;">
                             <i class="fas fa-copy"></i> Copy nPub
                         </button>
 
@@ -267,8 +267,10 @@ const views = {
                 }
                 
                 // Update name and bio
-                document.querySelector('.profile-name').textContent = 
-                    `${profile.displayName} ${profile.name ? `• @${profile.name}` : ''}`;
+                const profileName = document.querySelector('.profile-name');
+                const verifiedBadge = profile.nip05 ? '<i class="fas fa-check-circle" style="color: #3498db; margin-left: 0.5dvh;"></i>' : '';
+                profileName.innerHTML = 
+                    `${profile.displayName}${verifiedBadge} ${profile.name ? `• @${profile.name}` : ''}`;
                 document.querySelector('.profile-bio').textContent = 
                     profile.about || 'No bio available';
                 
@@ -406,10 +408,30 @@ function handleNpubSubmit() {
 // Copy profile URL to clipboard
 async function copyProfileUrl() {
     const url = window.location.href;
+    const copyButton = document.querySelector('.copy-button');
+    const originalText = copyButton.innerHTML;
+
     try {
-        await navigator.clipboard.writeText(url);
-        const copyButton = document.querySelector('.copy-button');
-        const originalText = copyButton.innerHTML;
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(url);
+        } else {
+            // Fallback for non-HTTPS or when Clipboard API is not available
+            const textArea = document.createElement('textarea');
+            textArea.value = url;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+            } catch (err) {
+                console.error('Failed to copy using execCommand:', err);
+                throw err;
+            } finally {
+                textArea.remove();
+            }
+        }
+        
         copyButton.innerHTML = '<i class="fas fa-check"></i> Copied!';
         setTimeout(() => {
             copyButton.innerHTML = originalText;
@@ -417,6 +439,51 @@ async function copyProfileUrl() {
         window.plausible('Copy Profile URL');
     } catch (err) {
         console.error('Failed to copy URL:', err);
+        copyButton.innerHTML = '<i class="fas fa-times"></i> Failed to copy';
+        setTimeout(() => {
+            copyButton.innerHTML = originalText;
+        }, 2000);
+    }
+}
+
+// Copy npub to clipboard
+async function copyNpub() {
+    const npub = window.location.hash.split('/').pop();
+    const copyNpubButton = document.querySelector('.copy-npub-button');
+    const originalText = copyNpubButton.innerHTML;
+
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(npub);
+        } else {
+            // Fallback for non-HTTPS or when Clipboard API is not available
+            const textArea = document.createElement('textarea');
+            textArea.value = npub;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+            } catch (err) {
+                console.error('Failed to copy using execCommand:', err);
+                throw err;
+            } finally {
+                textArea.remove();
+            }
+        }
+
+        copyNpubButton.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        setTimeout(() => {
+            copyNpubButton.innerHTML = originalText;
+        }, 2000);
+        window.plausible('Copy Npub');
+    } catch (err) {
+        console.error('Failed to copy npub:', err);
+        copyNpubButton.innerHTML = '<i class="fas fa-times"></i> Failed to copy';
+        setTimeout(() => {
+            copyNpubButton.innerHTML = originalText;
+        }, 2000);
     }
 }
 
@@ -435,6 +502,7 @@ function toggleQRModal() {
 // Make functions available globally
 window.handleNpubSubmit = handleNpubSubmit;
 window.copyProfileUrl = copyProfileUrl;
+window.copyNpub = copyNpub;
 window.toggleQRModal = toggleQRModal;
 
 // Initialize app when DOM is ready

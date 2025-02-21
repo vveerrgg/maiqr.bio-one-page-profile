@@ -666,7 +666,8 @@ html:not(.loading):before {
 }
 
 .qr-button,
-.copy-button {
+.copy-button,
+.copy-npub-button {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -693,18 +694,21 @@ html:not(.loading):before {
 }
 
 .qr-button i,
-.copy-button i {
+.copy-button i,
+.copy-npub-button i {
     font-size: 1.1rem;
 }
 
 /* Dark mode adjustments */
 [data-theme="dark"] .qr-button,
-[data-theme="dark"] .copy-button {
+[data-theme="dark"] .copy-button,
+[data-theme="dark"] .copy-npub-button {
     background: #0984e3;
 }
 
 [data-theme="dark"] .qr-button:hover,
-[data-theme="dark"] .copy-button:hover {
+[data-theme="dark"] .copy-button:hover,
+[data-theme="dark"] .copy-npub-button:hover {
     background: #0070c9;
 }
 
