@@ -658,6 +658,56 @@ html:not(.loading):before {
     transform: translateY(-1px);
 }
 
+#qr-container {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-start;
+    margin-top: 2rem;
+}
+
+.qr-button,
+.copy-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    border: none;
+    border-radius: 8px;
+    background: var(--secondary-color);
+    color: white;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.qr-button:hover,
+.copy-button:hover {
+    background: #0070c9;
+    transform: translateY(-1px);
+}
+
+.qr-button:active,
+.copy-button:active {
+    transform: translateY(0);
+}
+
+.qr-button i,
+.copy-button i {
+    font-size: 1.1rem;
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .qr-button,
+[data-theme="dark"] .copy-button {
+    background: #0984e3;
+}
+
+[data-theme="dark"] .qr-button:hover,
+[data-theme="dark"] .copy-button:hover {
+    background: #0070c9;
+}
+
 /* Modal Styles */
 .modal {
     display: none;
