@@ -206,27 +206,31 @@ const views = {
         const view = `
             <div class="container">
                 <div class="profile-content loading">
-                    <div class="profile-header">
-                        <div class="profile-image-container">
+                    <div class="profile-header" style="display: flex; align-items: flex-start;">
+                        <div class="profile-image-container" style="padding-top: 2dvh; margin-bottom: -4dvh;">
                             <img src="assets/imgs/default-avatar.svg" alt="Profile" class="profile-image" />
                         </div>
-                        <div class="profile-info">
+                       
+                    </div>
+                    <div class="profile-details">
+                        <div class="profile-info" style="flex: 1; padding-top: 2dvh;">
                             <h1 class="profile-name">Loading...</h1>
                             <p class="profile-bio">Loading profile information...</p>
                         </div>
-                    </div>
-                    <div class="profile-details">
+                        <hr style="margin-bottom: 2dvh;">
                         <div class="detail-group">
-                            <label>Nostr Address</label>
-                            <code class="npub-display">${npub}</code>
-                            <button onclick="copyProfileUrl()" class="copy-button">
-                                <i class="fas fa-copy"></i> Copy URL
-                            </button>
+                            <div style="margin-bottom: 1dvh;">
+                                <label>Nostr Address</label>
+                                <textarea class="npub-textarea" readonly onclick="this.select()">${npub}</textarea>
+                            </div>
                         </div>
                     </div>
-                    <div id="qr-container">
+                    <div id="qr-container" style="margin-top: 2dvh;">
                         <button onclick="toggleQRModal()" class="qr-button">
                             <i class="fas fa-qrcode"></i> Show QR Code
+                        </button>
+                        <button onclick="copyProfileUrl()" class="copy-button">
+                            <i class="fas fa-copy"></i> Copy URL
                         </button>
                     </div>
                 </div>
@@ -258,11 +262,21 @@ const views = {
                 
                 // Add additional profile details if available
                 const detailsContainer = document.querySelector('.profile-details');
-                
+
+                if (profile.website) {
+                    detailsContainer.insertAdjacentHTML('beforeend', `
+                        <div class="detail-group" style="margin-bottom: 2dvh;">
+                            <label>Website: </label>
+                            <a href="${profile.website}" target="_blank" rel="noopener noreferrer">${profile.website}</a>
+                        </div>
+                    `);
+                }
+
+
                 if (profile.nip05) {
                     detailsContainer.insertAdjacentHTML('beforeend', `
                         <div class="detail-group">
-                            <label>Verified As</label>
+                            <label>Verified As: </label>
                             <code>${profile.nip05}</code>
                         </div>
                     `);
@@ -271,23 +285,18 @@ const views = {
                 if (profile.lightning) {
                     detailsContainer.insertAdjacentHTML('beforeend', `
                         <div class="detail-group">
-                            <label>Lightning Address</label>
+                            <label>Lightning Address: </label>
                             <code>${profile.lightning}</code>
                         </div>
                     `);
                 }
                 
-                if (profile.website) {
-                    detailsContainer.insertAdjacentHTML('beforeend', `
-                        <div class="detail-group">
-                            <label>Website</label>
-                            <a href="${profile.website}" target="_blank" rel="noopener noreferrer">${profile.website}</a>
-                        </div>
-                    `);
-                }
                 
                 // Remove loading state
                 document.querySelector('.profile-content').classList.remove('loading');
+                
+                // Initialize textarea
+                initializeTextarea();
                 
             } catch (error) {
                 console.error('Failed to fetch profile:', error);
@@ -315,6 +324,19 @@ function updateThemeIcon(theme) {
     const themeIcon = document.querySelector('.theme-toggle i');
     if (themeIcon) {
         themeIcon.className = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
+    }
+}
+
+function initializeTextarea() {
+    const textarea = document.querySelector('.npub-textarea');
+    if (textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+        
+        // Add click handler to select all text
+        textarea.addEventListener('click', function() {
+            this.select();
+        });
     }
 }
 

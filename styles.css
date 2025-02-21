@@ -840,3 +840,35 @@ html:not(.loading):before {
         margin-bottom: 1.5rem;
     }
 }
+
+.npub-textarea {
+    width: 100%;
+    min-height: 2.5em;
+    padding: 0.5rem;
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-color);
+    font-family: monospace;
+    font-size: 0.9rem;
+    resize: none;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.npub-textarea:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+}
+
+.detail-group {
+    margin-bottom: 1.5rem;
+}
+
+.detail-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+    opacity: 0.8;
+}
