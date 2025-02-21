@@ -242,10 +242,17 @@ const views = {
                     </div>
                 </div>
             </div>
-            <div id="qr-modal" class="modal">
+            <div id="qr-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="qr-title">
                 <div class="modal-content">
-                    <span class="close" onclick="toggleQRModal()">&times;</span>
-                    <div id="qr-modal-content"></div>
+                    <button class="modal-close" onclick="toggleQRModal()" aria-label="Close QR code" title="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div class="modal-body" style="flex-direction: column;">
+                        <div id="qr-modal-content"></div>
+                        <div style="display: flex; align-items: center; gap: 4dvw; max-width: 18rem; margin-top: 2dvh; text-align: center;">
+                        <p>Scan with your camera to visit this profile on a light-weight web app.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="info-section" style="margin: 4dvh auto 0; padding: 2dvh; background: var(--bg-secondary); border-radius: 8px; font-size: 0.9em; color: var(--text-secondary); max-width: 800px; width: calc(100% - 4dvh);">
@@ -492,10 +499,35 @@ function toggleQRModal() {
     const modal = document.getElementById('qr-modal');
     if (modal) {
         const isShowing = !modal.classList.contains('show');
-        modal.classList.toggle('show');
         if (isShowing) {
+            modal.classList.add('show');
+            // Focus the close button for keyboard accessibility
+            const closeButton = modal.querySelector('.modal-close');
+            if (closeButton) {
+                closeButton.focus();
+            }
+            // Add click event listener to close when clicking outside
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    toggleQRModal();
+                }
+            });
+            // Add escape key listener
+            document.addEventListener('keydown', handleEscapeKey);
             window.plausible('View QR Code');
+        } else {
+            modal.classList.remove('show');
+            // Remove event listeners
+            modal.removeEventListener('click', toggleQRModal);
+            document.removeEventListener('keydown', handleEscapeKey);
         }
+    }
+}
+
+// Handle escape key press for modal
+function handleEscapeKey(e) {
+    if (e.key === 'Escape') {
+        toggleQRModal();
     }
 }
 
