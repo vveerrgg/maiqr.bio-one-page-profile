@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Maiqr Domain Setup</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .step {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .step.active {
+            border-color: #4CAF50;
+            background-color: #f9fff9;
+        }
+        .step.completed {
+            border-color: #45a049;
+            background-color: #f0fff0;
+        }
+        .records {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <h1>Set Up Your Domain with Maiqr</h1>
+    
+    <div class="step active" id="step1">
+        <h2>Step 1: Enter Your Domain</h2>
+        <input type="text" id="domain" placeholder="yourdomain.com" style="padding: 8px; width: 300px;">
+        <button onclick="verifyDomain()">Verify Domain</button>
+        <div id="domainStatus" class="status"></div>
+    </div>
+
+    <div class="step" id="step2">
+        <h2>Step 2: Add DNS Records</h2>
+        <p>Add these records to your domain's DNS settings:</p>
+        <div class="records" id="dnsRecords">
+            <pre>
+# A Record
+Type: A
+Host: @
+Value: [Your Maiqr IP]
+
+# CNAME Record
+Type: CNAME
+Host: www
+Value: [Your Maiqr Domain]
+
+# TXT Records
+Type: TXT
+Host: nostr_
+Value: [Will be generated]
+
+Type: TXT
+Host: nostrrelays_
+Value: [Will be generated]
+
+Type: TXT
+Host: maiqr_
+Value: [Will be generated]
+            </pre>
+        </div>
+        <button onclick="verifyRecords()">Verify Records</button>
+        <div id="recordStatus" class="status"></div>
+    </div>
+
+    <div class="step" id="step3">
+        <h2>Step 3: Connect Your Nostr Identity</h2>
+        <input type="text" id="npub" placeholder="npub1..." style="padding: 8px; width: 300px;">
+        <button onclick="connectNostr()">Connect</button>
+        <div id="nostrStatus" class="status"></div>
+    </div>
+
+    <div class="step" id="step4">
+        <h2>Step 4: Choose Your Template</h2>
+        <select id="template" style="padding: 8px; width: 300px;">
+            <option value="one_page_profile">One Page Profile</option>
+            <option value="business">Business Landing Page</option>
+            <option value="creator">Creator Portfolio</option>
+            <option value="custom">Custom Template</option>
+        </select>
+        <button onclick="deployProfile()">Deploy Profile</button>
+        <div id="deployStatus" class="status"></div>
+    </div>
+
+    <script>
+        async function dnsOverHttpsQuery(domain, type) {
+            const url = `https://dns.google/resolve?name=${domain}&type=${type}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                return data.Answer || [];
+            } catch (error) {
+                console.error('DNS query failed:', error);
+                return [];
+            }
+        }
+
+        async function verifyDomain() {
+            const domain = document.getElementById('domain').value;
+            const status = document.getElementById('domainStatus');
+            
+            try {
+                const records = await dnsOverHttpsQuery(domain, 'A');
+                if (records.length > 0) {
+                    status.className = 'status success';
+                    status.textContent = 'Domain verified! Proceed to DNS setup.';
+                    document.getElementById('step1').className = 'step completed';
+                    document.getElementById('step2').className = 'step active';
+                    
+                    // Update DNS records with actual domain
+                    updateDNSRecords(domain);
+                } else {
+                    status.className = 'status error';
+                    status.textContent = 'Domain not found. Please check your domain name.';
+                }
+            } catch (error) {
+                status.className = 'status error';
+                status.textContent = 'Error verifying domain: ' + error.message;
+            }
+        }
+
+        async function verifyRecords() {
+            const domain = document.getElementById('domain').value;
+            const status = document.getElementById('recordStatus');
+            
+            try {
+                const [aRecords, nostrRecords] = await Promise.all([
+                    dnsOverHttpsQuery(domain, 'A'),
+                    dnsOverHttpsQuery(`nostr_.${domain}`, 'TXT')
+                ]);
+
+                if (aRecords.length > 0 && nostrRecords.length > 0) {
+                    status.className = 'status success';
+                    status.textContent = 'DNS records verified! Proceed to Nostr setup.';
+                    document.getElementById('step2').className = 'step completed';
+                    document.getElementById('step3').className = 'step active';
+                } else {
+                    status.className = 'status error';
+                    status.textContent = 'Some DNS records are missing. Please check your settings.';
+                }
+            } catch (error) {
+                status.className = 'status error';
+                status.textContent = 'Error verifying records: ' + error.message;
+            }
+        }
+
+        function updateDNSRecords(domain) {
+            const recordsDiv = document.getElementById('dnsRecords');
+            recordsDiv.innerHTML = `<pre>
+# A Record
+Type: A
+Host: @
+Value: 185.199.108.153
+
+# CNAME Record
+Type: CNAME
+Host: www
+Value: ${domain}
+
+# TXT Records
+Type: TXT
+Host: nostr_
+Value: "npub=[Your NPUB],name=${domain}"
+
+Type: TXT
+Host: nostrrelays_
+Value: "wss://relay.maiqr.app,wss://relay.damus.io"
+
+Type: TXT
+Host: maiqr_
+Value: "template=one_page_profile,version=1.0.0"</pre>`;
+        }
+
+        async function connectNostr() {
+            const npub = document.getElementById('npub').value;
+            const status = document.getElementById('nostrStatus');
+            
+            if (npub.startsWith('npub1')) {
+                status.className = 'status success';
+                status.textContent = 'Nostr identity connected! Choose your template.';
+                document.getElementById('step3').className = 'step completed';
+                document.getElementById('step4').className = 'step active';
+            } else {
+                status.className = 'status error';
+                status.textContent = 'Invalid npub. Please check your Nostr public key.';
+            }
+        }
+
+        async function deployProfile() {
+            const domain = document.getElementById('domain').value;
+            const template = document.getElementById('template').value;
+            const status = document.getElementById('deployStatus');
+            
+            status.className = 'status success';
+            status.textContent = `Deploying ${template} template to ${domain}...`;
+            
+            // Here we would actually:
+            // 1. Generate the profile page
+            // 2. Deploy it to our hosting
+            // 3. Set up NIP-05 verification
+            // 4. Configure any additional services
+            
+            setTimeout(() => {
+                status.textContent = `Profile deployed! Visit https://${domain} to see your new profile.`;
+                document.getElementById('step4').className = 'step completed';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

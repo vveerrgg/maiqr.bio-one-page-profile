@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nostr DNS Profile Lookup</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        input[type="text"] {
+            width: 70%;
+            padding: 8px;
+            margin-right: 10px;
+        }
+        button {
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .record {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: white;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+        .record h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .error {
+            color: #721c24;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Nostr DNS Profile Lookup</h1>
+    
+    <div class="input-group">
+        <input type="text" id="domain" placeholder="Enter name (e.g., alice)" value="">
+        <button onclick="lookupRecords()">Lookup</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        async function dnsOverHttpsQuery(domain, type) {
+            const url = `https://dns.google/resolve?name=${domain}&type=${type}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                return data.Answer || [];
+            } catch (error) {
+                console.error('DNS query failed:', error);
+                return [];
+            }
+        }
+
+        function parseTxtRecord(txtRecord) {
+            // Remove quotes if present
+            txtRecord = txtRecord.replace(/^"|"$/g, '');
+            const [key, value] = txtRecord.split('=');
+            return { key, value };
+        }
+
+        function parseRelays(relaysStr) {
+            try {
+                // Remove quotes and parse JSON array
+                relaysStr = relaysStr.replace(/^"|"$/g, '');
+                return JSON.parse(relaysStr);
+            } catch (e) {
+                // Fallback to comma-separated format
+                return relaysStr.split(',').map(relay => relay.trim());
+            }
+        }
+
+        async function lookupRecords() {
+            const customDomain = document.getElementById('domain').value.trim();
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Looking up records...</p>';
+
+            try {
+                // Construct the full domain
+                const fullDomain = `${customDomain}.maiqr.bio`;
+                const txtRecords = await dnsOverHttpsQuery(fullDomain, 'TXT');
+
+                if (txtRecords.length === 0) {
+                    resultsDiv.innerHTML = `<div class="error">No records found for ${fullDomain}</div>`;
+                    return;
+                }
+
+                let html = `<h2>Records for ${fullDomain}</h2>`;
+                
+                const profileData = {
+                    nostr: null,
+                    relays: [],
+                    url: null
+                };
+
+                txtRecords.forEach(record => {
+                    const { key, value } = parseTxtRecord(record.data);
+                    
+                    switch(key) {
+                        case 'nostr':
+                            profileData.nostr = value;
+                            break;
+                        case 'relays':
+                            profileData.relays = parseRelays(value);
+                            break;
+                        case 'url':
+                            profileData.url = value;
+                            break;
+                    }
+                });
+
+                // Display the results
+                if (profileData.nostr) {
+                    html += `
+                        <div class="record">
+                            <h3>Nostr Public Key</h3>
+                            <p>${profileData.nostr}</p>
+                        </div>`;
+                }
+
+                if (profileData.relays.length > 0) {
+                    html += `
+                        <div class="record">
+                            <h3>Relays</h3>
+                            <ul>
+                                ${profileData.relays.map(relay => `<li>${relay}</li>`).join('')}
+                            </ul>
+                        </div>`;
+                }
+
+                if (profileData.url) {
+                    html += `
+                        <div class="record">
+                            <h3>Official URL</h3>
+                            <p><a href="${profileData.url}" target="_blank">${profileData.url}</a></p>
+                        </div>`;
+                }
+
+                resultsDiv.innerHTML = html;
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">Error looking up records: ${error.message}</div>`;
+            }
+        }
+
+        // Allow Enter key to trigger lookup
+        document.getElementById('domain').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                lookupRecords();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nostr Profile Editor</title>
+    <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+    </style>
+</head>
+<body>
+    <h1>Nostr Profile Editor</h1>
+    
+    <div class="input-group">
+        <label for="privateKey">Private Key (nsec or hex):</label>
+        <input type="text" id="privateKey" placeholder="Enter your private key">
+    </div>
+
+    <div class="input-group">
+        <label for="name">Name:</label>
+        <input type="text" id="name" placeholder="Your display name">
+    </div>
+
+    <div class="input-group">
+        <label for="about">About:</label>
+        <input type="text" id="about" placeholder="About you">
+    </div>
+
+    <div class="input-group">
+        <label for="verified">Verified As:</label>
+        <input type="text" id="verified" placeholder="Verification status">
+    </div>
+
+    <div class="input-group">
+        <label for="nip05">NIP-05 Identity:</label>
+        <input type="text" id="nip05" placeholder="you@domain.com">
+    </div>
+
+    <div class="input-group">
+        <label for="dns_tld">Custom DNS TLD:</label>
+        <input type="text" id="dns_tld" placeholder="e.g., vveerrgg.online">
+    </div>
+
+    <div class="input-group">
+        <label for="maiqr_version">Maiqr Version:</label>
+        <input type="text" id="maiqr_version" placeholder="Maiqr version">
+    </div>
+
+    <div class="input-group">
+        <label for="maiqr_template">Maiqr Template:</label>
+        <input type="text" id="maiqr_template" placeholder="Maiqr template">
+    </div>
+
+    <div class="input-group">
+        <label for="maiqr_features">Maiqr Features:</label>
+        <input type="text" id="maiqr_features" placeholder="Maiqr features (comma-separated)">
+    </div>
+
+    <button onclick="updateProfile()">Update Profile</button>
+
+    <div id="status"></div>
+
+    <script>
+        async function updateProfile() {
+            try {
+                const privateKeyInput = document.getElementById('privateKey').value;
+                let privateKey;
+
+                // Handle both nsec and hex formats
+                if (privateKeyInput.startsWith('nsec')) {
+                    privateKey = NostrTools.nip19.decode(privateKeyInput).data;
+                } else {
+                    privateKey = privateKeyInput;
+                }
+
+                const name = document.getElementById('name').value;
+                const about = document.getElementById('about').value;
+                const verified = document.getElementById('verified').value;
+                const nip05 = document.getElementById('nip05').value;
+                const dnsTld = document.getElementById('dns_tld').value;
+                const maiqrVersion = document.getElementById('maiqr_version').value;
+                const maiqrTemplate = document.getElementById('maiqr_template').value;
+                const maiqrFeatures = document.getElementById('maiqr_features').value.split(',').map(f => f.trim());
+
+                // Create profile content with custom metadata
+                const content = JSON.stringify({
+                    name: name,
+                    about: about,
+                    verified_as: verified,
+                    nip05: nip05, // Standard NIP-05 field
+                    maiqr: {
+                        version: maiqrVersion,
+                        template: maiqrTemplate,
+                        features: maiqrFeatures,
+                        dns_tld: dnsTld,
+                        verification: {
+                            type: 'extended_nip05',
+                            domain: dnsTld,
+                            updated_at: Math.floor(Date.now() / 1000)
+                        },
+                        updated_at: Math.floor(Date.now() / 1000)
+                    }
+                });
+
+                // Create the event
+                const event = {
+                    kind: 0,
+                    created_at: Math.floor(Date.now() / 1000),
+                    tags: [],
+                    content: content
+                };
+
+                // Sign the event
+                const signedEvent = await NostrTools.finishEvent(event, privateKey);
+
+                // Connect to some relays and publish
+                const relays = [
+                    'wss://relay.damus.io',
+                    'wss://nostr.fmt.wiz.biz',
+                    'wss://relay.nostr.band'
+                ];
+
+                for (const relay of relays) {
+                    const pool = new NostrTools.SimplePool();
+                    try {
+                        await pool.publish(relay, signedEvent);
+                    } catch (e) {
+                        console.error(`Failed to publish to ${relay}:`, e);
+                    }
+                }
+
+                const statusDiv = document.getElementById('status');
+                statusDiv.className = 'success';
+                statusDiv.textContent = 'Profile updated successfully!';
+            } catch (error) {
+                const statusDiv = document.getElementById('status');
+                statusDiv.className = 'error';
+                statusDiv.textContent = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

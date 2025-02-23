@@ -255,6 +255,16 @@ const views = {
                     </div>
                 </div>
             </div>
+
+            <!-- Lists section -->
+            <div id="nostr-lists" class="info-section" style="margin: 4dvh auto 0; padding: 2dvh; background: var(--bg-secondary); border-radius: 8px; max-width: 800px; width: calc(100% - 4dvh);">
+                <h3 style="margin-bottom: 2dvh; color: var(--text-primary);">Lists</h3>
+                <div id="lists-container" style="display: grid; gap: 2dvh;">
+                    <!-- Lists will be dynamically inserted here -->
+                </div>
+            </div>
+
+            <!-- about nostr verification -->
             <div class="info-section" style="margin: 4dvh auto 0; padding: 2dvh; background: var(--bg-secondary); border-radius: 8px; font-size: 0.9em; color: var(--text-secondary); max-width: 800px; width: calc(100% - 4dvh);">
                 <h3 style="margin-bottom: 1dvh;">About Nostr Verification</h3>
                 <p>A "<a href="https://github.com/nostr-protocol/nips/blob/master/05.md" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">Verified As</a>" address (NIP-05) on Nostr is similar to how email works - the same username can exist on different platforms. For example, "user@platform1.com" and "user@platform2.com" are different verifications.</p>
@@ -340,6 +350,16 @@ const views = {
                 // Initialize textarea
                 initializeTextarea();
                 
+                // Fetch and display lists if profile has npub
+                if (profile.npub) {
+                    try {
+                        const listsResponse = await fetch(`/api/profile/${profile.npub}/lists`);
+                        const lists = await listsResponse.json();
+                        displayLists(lists);
+                    } catch (error) {
+                        console.warn('Failed to fetch lists:', error);
+                    }
+                }
             } catch (error) {
                 console.error('Failed to fetch profile:', error);
                 document.querySelector('.profile-bio').textContent = 
@@ -529,6 +549,62 @@ function handleEscapeKey(e) {
     if (e.key === 'Escape') {
         toggleQRModal();
     }
+}
+
+// Display lists
+function displayLists(lists) {
+    const container = document.getElementById('lists-container');
+    const listsSection = document.getElementById('nostr-lists');
+    
+    if (!lists || Object.keys(lists).length === 0) {
+        listsSection.style.display = 'none';
+        return;
+    }
+
+    listsSection.style.display = 'block';
+    container.innerHTML = Object.values(lists).map(list => `
+        <div class="list-card" style="background: var(--bg-primary); padding: 2dvh; border-radius: 8px; border: 1px solid var(--border-color);">
+            <h4 style="margin: 0 0 1dvh; color: var(--text-primary);">${escapeHtml(list.title)}</h4>
+            ${list.description ? `<p style="margin: 0 0 1.5dvh; color: var(--text-secondary); font-size: 0.9em;">${escapeHtml(list.description)}</p>` : ''}
+            <div class="list-items" style="display: grid; gap: 1dvh;">
+                ${list.items.map(item => {
+                    if (item.type === 'l') {
+                        return `<a href="${escapeHtml(item.value)}" target="_blank" rel="noopener noreferrer" 
+                                  style="color: var(--text-primary); text-decoration: none; display: flex; align-items: center; gap: 0.5dvh;">
+                                  <span style="color: var(--text-secondary);">🔗</span>
+                                  ${escapeHtml(item.title || item.value)}
+                               </a>`;
+                    } else if (item.type === 'e') {
+                        return `<a href="https://njump.me/${item.value}" target="_blank" rel="noopener noreferrer" 
+                                  style="color: var(--text-primary); text-decoration: none; display: flex; align-items: center; gap: 0.5dvh;">
+                                  <span style="color: var(--text-secondary);">📝</span>
+                                  Note
+                               </a>`;
+                    } else if (item.type === 'p') {
+                        return `<a href="https://njump.me/${item.value}" target="_blank" rel="noopener noreferrer" 
+                                  style="color: var(--text-primary); text-decoration: none; display: flex; align-items: center; gap: 0.5dvh;">
+                                  <span style="color: var(--text-secondary);">👤</span>
+                                  Profile
+                               </a>`;
+                    }
+                    return '';
+                }).join('')}
+            </div>
+            <div style="margin-top: 1.5dvh; font-size: 0.8em; color: var(--text-secondary);">
+                ${new Date(list.created_at * 1000).toLocaleDateString()}
+            </div>
+        </div>
+    `).join('');
+}
+
+// Escape HTML
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 // Make functions available globally
