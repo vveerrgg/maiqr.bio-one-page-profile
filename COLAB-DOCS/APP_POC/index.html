@@ -431,36 +431,45 @@
                 const signedEvent = await window.nostr.signEvent(event);
                 
                 // Publish to relays
-                const promises = DEFAULT_RELAYS.map(relay => new Promise(async (resolve) => {
+                let published = false;
+                for (const relay of DEFAULT_RELAYS) {
+                    if (published) break;
+                    
                     try {
                         const ws = new WebSocket(relay);
                         
-                        ws.onopen = () => {
-                            ws.send(JSON.stringify(["EVENT", signedEvent]));
-                        };
+                        await new Promise((resolve, reject) => {
+                            ws.onopen = () => {
+                                ws.send(JSON.stringify(["EVENT", signedEvent]));
+                            };
 
-                        ws.onmessage = (e) => {
-                            const [type, eventId, success, message] = JSON.parse(e.data);
-                            if (type === "OK" && success) {
-                                ws.close();
+                            ws.onmessage = (e) => {
+                                const [type, eventId, success, message] = JSON.parse(e.data);
+                                if (type === "OK" && success) {
+                                    published = true;
+                                    console.log(`Published to relay ${relay}: ${eventId}`);
+                                    ws.close();
+                                    resolve();
+                                }
+                            };
+
+                            setTimeout(() => {
+                                if (ws.readyState === WebSocket.OPEN) {
+                                    ws.close();
+                                }
                                 resolve();
-                            }
-                        };
+                            }, 3000);
 
-                        setTimeout(() => {
-                            if (ws.readyState === WebSocket.OPEN) {
-                                ws.close();
-                            }
-                            resolve();
-                        }, 3000);
-
-                        ws.onerror = () => resolve();
+                            ws.onerror = () => resolve();
+                        });
                     } catch (error) {
-                        resolve();
+                        console.error(`Failed to publish to ${relay}:`, error);
                     }
-                }));
+                }
 
-                await Promise.all(promises);
+                if (!published) {
+                    throw new Error('Failed to publish to any relay');
+                }
                 alert('List created successfully!');
 
                 // Clear form
