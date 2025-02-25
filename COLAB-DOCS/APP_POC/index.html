@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nostr List Reader</title>
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --background-color: #1a1b26;
+            --text-color: #a9b1d6;
+            --card-background: #24283b;
+            --border-color: #414868;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input, button, textarea, select {
+            background: var(--card-background);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        input, textarea {
+            flex: 1;
+        }
+
+        button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .list-card {
+            background: var(--card-background);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .list-title {
+            color: white;
+            margin: 0 0 10px 0;
+        }
+
+        .list-description {
+            margin-bottom: 15px;
+            color: var(--text-color);
+        }
+
+        .list-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .list-item {
+            background: var(--background-color);
+            color: var(--text-color);
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .list-item:hover {
+            background: var(--border-color);
+        }
+
+        .list-meta {
+            font-size: 12px;
+            color: var(--text-color);
+            opacity: 0.8;
+        }
+
+        .error {
+            color: #f87171;
+            padding: 10px;
+            border-radius: 6px;
+            background: rgba(248, 113, 113, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-color);
+        }
+
+        .user-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: var(--card-background);
+            border-radius: 8px;
+        }
+
+        .create-list-section {
+            display: none;
+            background: var(--card-background);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .create-list-section.visible {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: white;
+        }
+
+        .tag-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        .tag {
+            background: var(--primary-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .tag button {
+            background: none;
+            border: none;
+            color: white;
+            padding: 0;
+            cursor: pointer;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Nostr List Reader</h1>
+            <p>View and create lists (kind:30001 & kind:30003)</p>
+        </div>
+
+        <div class="user-section">
+            <div id="login-status">Not logged in</div>
+            <button id="loginButton">Login with Nostr</button>
+        </div>
+
+        <div class="input-group">
+            <input type="text" id="pubkey" placeholder="Enter npub">
+            <button id="fetchButton">Fetch Lists</button>
+        </div>
+
+        <div id="create-list-section" class="create-list-section">
+            <h3>Create New List</h3>
+            <div class="form-group">
+                <label for="listType">List Type</label>
+                <select id="listType">
+                    <option value="30001">Categorized List (30001)</option>
+                    <option value="30003">Bookmark Set (30003) - for grouped bookmarks of notes, articles, hashtags, URLs</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="listTitle">Title</label>
+                <input type="text" id="listTitle" placeholder="Enter list title">
+            </div>
+            <div class="form-group">
+                <label for="listDescription">Description</label>
+                <textarea id="listDescription" rows="3" placeholder="Enter list description"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Add Items</label>
+                <div class="tag-input">
+                    <input type="text" id="itemInput" placeholder="Enter note ID, pubkey, or URL">
+                    <input type="text" id="itemLabel" placeholder="Label (optional)">
+                    <button id="addItemButton">Add</button>
+                </div>
+                <div id="itemsContainer" class="tags-container"></div>
+            </div>
+            <button id="createListButton">Create List</button>
+        </div>
+
+        <div id="lists-container"></div>
+    </div>
+
+    <script>
+        // Default relays to use
+        const DEFAULT_RELAYS = [
+            'wss://relay.damus.io',
+            'wss://nos.lol',
+            'wss://relay.nostr.band',
+            'wss://relay.maiqr.app'
+        ];
+
+        let currentUser = null;
+        let listItems = [];
+
+        // Initialize login status
+        async function checkLoginStatus() {
+            try {
+                if (typeof window.nostr === 'undefined') {
+                    throw new Error('No Nostr extension found');
+                }
+                const pubkey = await window.nostr.getPublicKey();
+                currentUser = pubkey;
+
+                // Fetch user profile
+                const profileEvents = [];
+                const promises = DEFAULT_RELAYS.map(relay => new Promise(async (resolve) => {
+                    try {
+                        const ws = new WebSocket(relay);
+                        
+                        ws.onopen = () => {
+                            const subId = Math.random().toString(36).substring(7);
+                            ws.send(JSON.stringify([
+                                "REQ",
+                                subId,
+                                {
+                                    authors: [pubkey],
+                                    kinds: [0],
+                                    limit: 1
+                                }
+                            ]));
+                        };
+
+                        ws.onmessage = (e) => {
+                            const [type, subId, event] = JSON.parse(e.data);
+                            if (type === "EVENT") {
+                                profileEvents.push(event);
+                                ws.close();
+                                resolve();
+                            } else if (type === "EOSE") {
+                                ws.close();
+                                resolve();
+                            }
+                        };
+
+                        setTimeout(() => {
+                            if (ws.readyState === WebSocket.OPEN) {
+                                ws.close();
+                            }
+                            resolve();
+                        }, 3000);
+
+                        ws.onerror = () => resolve();
+                    } catch (error) {
+                        resolve();
+                    }
+                }));
+
+                await Promise.all(promises);
+
+                // Get the latest profile event
+                let displayName = pubkey.slice(0, 8) + '...';
+                if (profileEvents.length > 0) {
+                    // Sort by created_at to get the latest
+                    profileEvents.sort((a, b) => b.created_at - a.created_at);
+                    try {
+                        const profile = JSON.parse(profileEvents[0].content);
+                        if (profile.display_name || profile.name) {
+                            displayName = profile.display_name || profile.name;
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse profile:', e);
+                    }
+                }
+
+                document.getElementById('login-status').textContent = `Logged in as: ${displayName}`;
+                document.getElementById('loginButton').textContent = 'Logout';
+                document.getElementById('create-list-section').classList.add('visible');
+            } catch (error) {
+                currentUser = null;
+                document.getElementById('login-status').textContent = 'Not logged in';
+                document.getElementById('loginButton').textContent = 'Login with Nostr';
+                document.getElementById('create-list-section').classList.remove('visible');
+            }
+        }
+
+        // Handle login/logout
+        document.getElementById('loginButton').addEventListener('click', async () => {
+            if (currentUser) {
+                currentUser = null;
+                await checkLoginStatus();
+            } else {
+                try {
+                    await window.nostr.getPublicKey();
+                    await checkLoginStatus();
+                } catch (error) {
+                    alert('Failed to login: ' + error.message);
+                }
+            }
+        });
+
+        // Handle adding items to the list
+        document.getElementById('addItemButton').addEventListener('click', () => {
+            const input = document.getElementById('itemInput');
+            const label = document.getElementById('itemLabel');
+            const value = input.value.trim();
+            const labelText = label.value.trim();
+
+            if (!value) return;
+
+            const item = { value, label: labelText || value };
+            listItems.push(item);
+            updateItemsDisplay();
+
+            input.value = '';
+            label.value = '';
+        });
+
+        // Update items display
+        function updateItemsDisplay() {
+            const container = document.getElementById('itemsContainer');
+            container.innerHTML = listItems.map((item, index) => `
+                <div class="tag">
+                    ${item.label}
+                    <button onclick="removeItem(${index})">×</button>
+                </div>
+            `).join('');
+        }
+
+        // Remove item from list
+        window.removeItem = function(index) {
+            listItems.splice(index, 1);
+            updateItemsDisplay();
+        };
+
+        // Create and publish a new list
+        document.getElementById('createListButton').addEventListener('click', async () => {
+            if (!currentUser) {
+                alert('Please login first');
+                return;
+            }
+
+            const title = document.getElementById('listTitle').value.trim();
+            const description = document.getElementById('listDescription').value.trim();
+            const kind = parseInt(document.getElementById('listType').value);
+
+            if (!title || listItems.length === 0) {
+                alert('Please enter a title and add at least one item');
+                return;
+            }
+
+            try {
+                const event = {
+                    kind,
+                    created_at: Math.floor(Date.now() / 1000),
+                    tags: [
+                        ['title', title],
+                        ['description', description],
+                        ...listItems.map(item => {
+                            // Determine if it's a note (e), person (p), or URL (l)
+                            let type = 'l'; // default to URL
+                            if (item.value.startsWith('npub1') || item.value.length === 64) {
+                                type = 'p';
+                            } else if (item.value.startsWith('note1') || item.value.length === 64) {
+                                type = 'e';
+                            }
+                            return [type, item.value, '', item.label];
+                        })
+                    ],
+                    content: description
+                };
+
+                const signedEvent = await window.nostr.signEvent(event);
+                
+                // Publish to relays
+                const promises = DEFAULT_RELAYS.map(relay => new Promise(async (resolve) => {
+                    try {
+                        const ws = new WebSocket(relay);
+                        
+                        ws.onopen = () => {
+                            ws.send(JSON.stringify(["EVENT", signedEvent]));
+                        };
+
+                        ws.onmessage = (e) => {
+                            const [type, eventId, success, message] = JSON.parse(e.data);
+                            if (type === "OK" && success) {
+                                ws.close();
+                                resolve();
+                            }
+                        };
+
+                        setTimeout(() => {
+                            if (ws.readyState === WebSocket.OPEN) {
+                                ws.close();
+                            }
+                            resolve();
+                        }, 3000);
+
+                        ws.onerror = () => resolve();
+                    } catch (error) {
+                        resolve();
+                    }
+                }));
+
+                await Promise.all(promises);
+                alert('List created successfully!');
+
+                // Clear form
+                document.getElementById('listTitle').value = '';
+                document.getElementById('listDescription').value = '';
+                listItems = [];
+                updateItemsDisplay();
+
+                // Fetch lists to show the new one
+                if (currentUser) {
+                    document.getElementById('pubkey').value = currentUser;
+                    fetchLists();
+                }
+            } catch (error) {
+                alert('Error creating list: ' + error.message);
+            }
+        });
+
+        // Get cached lists from localStorage
+        function getCachedLists(pubkey) {
+            const cached = localStorage.getItem(`nostr_lists_${pubkey}`);
+            if (cached) {
+                const { lists, timestamp } = JSON.parse(cached);
+                // Cache for 1 hour
+                if (Date.now() - timestamp < 60 * 60 * 1000) {
+                    return lists;
+                }
+            }
+            return null;
+        }
+
+        // Save lists to localStorage
+        function cacheLists(pubkey, lists) {
+            localStorage.setItem(`nostr_lists_${pubkey}`, JSON.stringify({
+                lists,
+                timestamp: Date.now()
+            }));
+        }
+
+        // Convert npub to hex
+        function npubToHex(npub) {
+            try {
+                const { type, data } = window.nostr.nip19.decode(npub);
+                return type === 'npub' ? data : npub;
+            } catch {
+                return npub;
+            }
+        }
+
+        async function fetchLists() {
+            const container = document.getElementById('lists-container');
+            const pubkeyInput = document.getElementById('pubkey');
+            const npub = pubkeyInput.value.trim();
+
+            if (!npub) {
+                container.innerHTML = '<div class="error">Please enter an npub</div>';
+                return;
+            }
+
+            // Convert npub to hex
+            const hexPubkey = npubToHex(npub);
+
+            // Check cache first
+            const cachedLists = getCachedLists(hexPubkey);
+            if (cachedLists) {
+                displayLists(cachedLists);
+                return;
+            }
+
+            container.innerHTML = '<div class="loading">Fetching lists...</div>';
+
+            try {
+                // Calculate timestamp for 1 year ago
+                const oneYearAgo = Math.floor(Date.now() / 1000) - (365 * 24 * 60 * 60);
+
+                // Create WebSocket connections to relays
+                const events = [];
+                const promises = DEFAULT_RELAYS.map(relay => new Promise(async (resolve) => {
+                    try {
+                        const ws = new WebSocket(relay);
+                        
+                        ws.onopen = () => {
+                            // Send subscription request
+                            const subId = Math.random().toString(36).substring(7);
+                            ws.send(JSON.stringify([
+                                "REQ",
+                                subId,
+                                {
+                                    authors: [hexPubkey],
+                                    kinds: [30001, 30003],
+                                    since: oneYearAgo
+                                }
+                            ]));
+                        };
+
+                        ws.onmessage = (e) => {
+                            const [type, subId, event] = JSON.parse(e.data);
+                            if (type === "EVENT") {
+                                events.push(event);
+                            } else if (type === "EOSE") {
+                                ws.close();
+                                resolve();
+                            }
+                        };
+
+                        // Set timeout for relay
+                        setTimeout(() => {
+                            if (ws.readyState === WebSocket.OPEN) {
+                                ws.close();
+                            }
+                            resolve();
+                        }, 3000);
+
+                        ws.onerror = () => resolve();
+                    } catch (error) {
+                        resolve();
+                    }
+                }));
+
+                // Wait for all relays to respond or timeout
+                await Promise.all(promises);
+                
+                // Cache the results
+                cacheLists(hexPubkey, events);
+
+                displayLists(events);
+            } catch (error) {
+                container.innerHTML = `<div class="error">Error fetching lists: ${error.message}</div>`;
+            }
+        }
+
+        function displayLists(events) {
+            const container = document.getElementById('lists-container');
+            
+            if (!events || events.length === 0) {
+                container.innerHTML = '<div class="error">No lists found</div>';
+                return;
+            }
+
+            // Sort events by creation date, newest first
+            events.sort((a, b) => b.created_at - a.created_at);
+
+            const listsHtml = events.map(event => {
+                // Get list metadata from tags
+                const title = event.tags.find(t => t[0] === 'title' || t[0] === 't')?.[1] || 'Untitled List';
+                const description = event.tags.find(t => t[0] === 'description' || t[0] === 'summary')?.[1] || event.content || '';
+                
+                // Get list items
+                const items = event.tags
+                    .filter(t => ['e', 'p', 'a', 'l'].includes(t[0]))
+                    .map(t => {
+                        const type = t[0];
+                        const value = t[1];
+                        const title = t[3] || value;
+                        
+                        if (type === 'l') {
+                            return `<a href="${value}" class="list-item" target="_blank" rel="noopener noreferrer">
+                                    <span>🔗</span>${title}
+                                   </a>`;
+                        } else if (type === 'e') {
+                            return `<a href="https://njump.me/${value}" class="list-item" target="_blank" rel="noopener noreferrer">
+                                    <span>📝</span>Note
+                                   </a>`;
+                        } else if (type === 'p') {
+                            return `<a href="https://njump.me/${value}" class="list-item" target="_blank" rel="noopener noreferrer">
+                                    <span>👤</span>Profile
+                                   </a>`;
+                        }
+                        return '';
+                    })
+                    .join('');
+
+                return `
+                    <div class="list-card">
+                        <h3 class="list-title">${title}</h3>
+                        <div class="list-description">${description}</div>
+                        <div class="list-items">${items}</div>
+                        <div class="list-meta">
+                            Kind: ${event.kind} • Created: ${new Date(event.created_at * 1000).toLocaleString()}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = listsHtml;
+        }
+
+        // Add click handler
+        document.getElementById('fetchButton').addEventListener('click', fetchLists);
+
+        // Auto-fetch lists if pubkey is in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('pubkey')) {
+            document.getElementById('pubkey').value = urlParams.get('pubkey');
+            fetchLists();
+        }
+
+        // Check login status on page load
+        checkLoginStatus();
+    </script>
+</body>
+</html>
