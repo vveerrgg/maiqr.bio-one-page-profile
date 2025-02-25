@@ -258,6 +258,64 @@
             background: #6b7280;
         }
 
+        .edit-button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 6px;
+            margin-right: 10px;
+            font-size: 14px;
+        }
+
+        .edit-button:hover {
+            opacity: 0.9;
+        }
+
+        .edit-button.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #6b7280;
+        }
+
+        .version-badge {
+            font-size: 12px;
+            padding: 2px 6px;
+            background: #4b5563;
+            border-radius: 4px;
+            margin-left: 8px;
+            color: #e5e7eb;
+        }
+
+        .version-history {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #374151;
+        }
+
+        .version-item {
+            padding: 4px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .version-item button {
+            background: none;
+            border: none;
+            color: #6366f1;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 2px 6px;
+        }
+
+        .version-item button:hover {
+            text-decoration: underline;
+        }
+
         .accordion-toggle {
             background: none;
             border: none;
@@ -1071,113 +1129,206 @@
             `;
         }
 
-        function displayLists(events, deletions) {
-            const container = document.getElementById('lists-container');
-            
-            if (!events || events.length === 0) {
-                container.innerHTML = '<div class="error">No lists found</div>';
+        async function editList(eventId) {
+            if (!currentUser) {
+                alert('Please login first');
                 return;
             }
 
-            // Sort events by creation date, newest first
-            events.sort((a, b) => b.created_at - a.created_at);
+            const listCard = document.querySelector(`[data-event-id="${eventId}"]`);
+            const event = eventsMap.get(eventId);
+            if (!event) {
+                alert('List not found');
+                return;
+            }
 
-            const listsHtml = events.map(event => {
-                const isDeleted = deletions.has(event.id);
-                // Get list metadata from tags
-                const title = event.tags.find(t => t[0] === 'title' || t[0] === 't')?.[1] || 'Untitled List';
-                const description = event.tags.find(t => t[0] === 'description' || t[0] === 'summary')?.[1] || event.content || '';
+            // Get current values
+            const title = event.tags.find(t => t[0] === 'title' || t[0] === 't')?.[1] || '';
+            const description = event.tags.find(t => t[0] === 'description' || t[0] === 'summary')?.[1] || event.content || '';
+            const items = event.tags.filter(t => ['e', 'p', 'a', 'l'].includes(t[0]));
+
+            // Create edit form
+            const form = document.createElement('div');
+            form.className = 'create-list-section';
+            form.innerHTML = `
+                <h2>Edit List</h2>
+                <input type="text" id="edit-title" placeholder="List Title" value="${title}" required>
+                <textarea id="edit-description" placeholder="List Description">${description}</textarea>
+                <div id="edit-items">
+                    ${items.map((item, index) => `
+                        <div class="item-input">
+                            <input type="text" value="${item[1]}" placeholder="URL, Note ID, or Profile">
+                            <input type="text" value="${item[3] || ''}" placeholder="Title (optional)">
+                            <button onclick="removeEditItem(${index})">Remove</button>
+                        </div>
+                    `).join('')}
+                </div>
+                <button onclick="addEditItem()">Add Item</button>
+                <div class="button-group">
+                    <button onclick="saveEdit('${eventId}')">Save Changes</button>
+                    <button onclick="cancelEdit('${eventId}')">Cancel</button>
+                </div>
+            `;
+
+            // Replace list content with form
+            const content = listCard.querySelector('.list-content') || listCard.querySelector('.accordion-content');
+            content.style.display = 'none';
+            listCard.insertBefore(form, content);
+
+            // Disable edit button
+            const editButton = listCard.querySelector('.edit-button');
+            editButton.disabled = true;
+            editButton.classList.add('disabled');
+        }
+
+        async function saveEdit(originalEventId) {
+            try {
+                const listCard = document.querySelector(`[data-event-id="${originalEventId}"]`);
+                const form = listCard.querySelector('.create-list-section');
                 
-                // Get list items
-                const items = event.tags
-                    .filter(t => ['e', 'p', 'a', 'l'].includes(t[0]))
-                    .map(t => {
-                        const type = t[0];
-                        const value = t[1];
-                        const title = t[3] || value;
-                        
-                        if (type === 'l') {
-                            return `<a href="${value}" class="list-item" target="_blank" rel="noopener noreferrer">
-                                    <span>🔗</span>${title}
-                                   </a>`;
-                        } else if (type === 'e') {
-                            return `<a href="https://njump.me/${value}" class="list-item" target="_blank" rel="noopener noreferrer">
-                                    <span>📝</span>Note
-                                   </a>`;
-                        } else if (type === 'p') {
-                            return `<a href="https://njump.me/${value}" class="list-item" target="_blank" rel="noopener noreferrer">
-                                    <span>👤</span>Profile
-                                   </a>`;
+                // Get form values
+                const title = document.getElementById('edit-title').value.trim();
+                const description = document.getElementById('edit-description').value.trim();
+                const itemInputs = form.querySelectorAll('.item-input');
+                
+                if (!title) {
+                    alert('Title is required');
+                    return;
+                }
+
+                // Create tags array
+                const tags = [
+                    ['t', title],
+                    ['description', description],
+                    // Reference to previous version
+                    ['e', originalEventId, 'reply']
+                ];
+
+                // Add items
+                itemInputs.forEach(item => {
+                    const [urlInput, titleInput] = item.querySelectorAll('input');
+                    const url = urlInput.value.trim();
+                    const itemTitle = titleInput.value.trim();
+                    
+                    if (url) {
+                        if (url.startsWith('https://') || url.startsWith('http://')) {
+                            tags.push(['l', url, '', itemTitle || url]);
+                        } else if (url.startsWith('npub1')) {
+                            tags.push(['p', url, '', itemTitle || 'Profile']);
+                        } else {
+                            tags.push(['e', url, '', itemTitle || 'Note']);
                         }
-                        return '';
-                    })
-                    .join('');
+                    }
+                });
 
-                // Add delete button if it's the current user's list and not already deleted
-                const deleteButton = currentUser && currentUser === event.pubkey && !isDeleted ? 
-                    `<button onclick="deleteList('${event.id}')" class="delete-button">Delete List</button>` : 
-                    (isDeleted ? `<button class="delete-button disabled" disabled>Deleted</button>` : '');
+                // Create new event
+                const event = {
+                    kind: 30003,
+                    created_at: Math.floor(Date.now() / 1000),
+                    tags,
+                    content: description
+                };
 
-                // Show which relays have this event
-                const relayInfo = event.relays ? 
-                    `<div class="relay-info">
-                        Found on ${event.relays.length} ${event.relays.length === 1 ? 'relay' : 'relays'}: ${event.relays.join(', ')}
-                        <div id="relay-statuses-${event.id}"></div>
-                    </div>` : '';
+                const signedEvent = await window.nostr.signEvent(event);
+                
+                // Publish new version
+                let published = false;
+                for (const relay of DEFAULT_RELAYS) {
+                    if (published) break;
+                    published = await publishToRelay(relay, signedEvent);
+                }
+
+                if (!published) {
+                    throw new Error('Failed to publish update to any relay');
+                }
+
+                // Create deletion event for old version
+                const deletionEvent = {
+                    kind: 5,
+                    created_at: Math.floor(Date.now() / 1000),
+                    tags: [['e', originalEventId]]
+                };
+
+                const signedDeletion = await window.nostr.signEvent(deletionEvent);
+                
+                // Publish deletion
+                published = false;
+                for (const relay of DEFAULT_RELAYS) {
+                    if (published) break;
+                    published = await publishToRelay(relay, signedDeletion);
+                }
+
+                // Update UI
+                cancelEdit(originalEventId);
+                
+                // Refresh lists
+                const pubkeyInput = document.getElementById('pubkey');
+                if (pubkeyInput.value) {
+                    fetchLists();
+                }
+
+            } catch (error) {
+                alert('Error saving changes: ' + error.message);
+            }
+        }
+
+        function cancelEdit(eventId) {
+            const listCard = document.querySelector(`[data-event-id="${eventId}"]`);
+            const form = listCard.querySelector('.create-list-section');
+            const content = listCard.querySelector('.list-content') || listCard.querySelector('.accordion-content');
+            
+            // Remove form and show content
+            form.remove();
+            content.style.display = 'block';
+
+            // Re-enable edit button
+            const editButton = listCard.querySelector('.edit-button');
+            editButton.disabled = false;
+            editButton.classList.remove('disabled');
+        }
+
+        function addEditItem() {
+            const itemsDiv = document.getElementById('edit-items');
+            const newItem = document.createElement('div');
+            newItem.className = 'item-input';
+            newItem.innerHTML = `
+                <input type="text" placeholder="URL, Note ID, or Profile">
+                <input type="text" placeholder="Title (optional)">
+                <button onclick="this.parentElement.remove()">Remove</button>
+            `;
+            itemsDiv.appendChild(newItem);
+        }
+
+        function removeEditItem(index) {
+            const items = document.getElementById('edit-items');
+            items.children[index].remove();
+        }
+
+        // Keep track of all events for editing
+        const eventsMap = new Map();
+
+        function displayLists(events, deletions) {
+            // Update eventsMap for editing
+            events.forEach(event => eventsMap.set(event.id, event));
+
+            // ... rest of the displayLists function ...
+
+                // Add edit button if it's the current user's list and not deleted
+                const editButton = currentUser && currentUser === event.pubkey && !isDeleted ? 
+                    `<button onclick="editList('${event.id}')" class="edit-button">Edit List</button>` : '';
+
+                // Check if this is an updated version
+                const isUpdate = event.tags.find(t => t[0] === 'e' && t[2] === 'reply');
+                const versionBadge = isUpdate ? 
+                    `<span class="version-badge">Edited</span>` : '';
 
                 return `
                     <div class="list-card ${isDeleted ? 'deleted' : ''}" data-event-id="${event.id}">
                         <div class="list-header">
-                            <h3 class="list-title">${title}${isDeleted ? ' (Deleted)' : ''}</h3>
-                            ${deleteButton}
+                            <h3 class="list-title">${title}${isDeleted ? ' (Deleted)' : ''}${versionBadge}</h3>
+                            <div class="button-group">
+                                ${editButton}
+                                ${deleteButton}
+                            </div>
                         </div>
-                        ${isDeleted ? 
-                            `<button id="toggle-${event.id}" class="accordion-toggle" onclick="toggleAccordion('${event.id}')">Show Details ▶</button>
-                             <div id="content-${event.id}" class="accordion-content">` : 
-                            `<div class="list-content">`}
-                        <div class="list-description">${description}</div>
-                        <div class="list-items">${items}</div>
-                        <div class="list-meta">
-                            Kind: ${event.kind} • Created: ${new Date(event.created_at * 1000).toLocaleString()}
-                            <br>Event ID: ${event.id}
-                            <br>Author: ${event.pubkey}
-                            ${relayInfo}
-                        </div>
-                        ${isDeleted ? '</div>' : '</div>'}
-                    </div>
-                `;
-            }).join('');
-
-            container.innerHTML = listsHtml;
-
-            // Update relay statuses for each event
-            events.forEach(event => {
-                updateRelayStatuses(event.id);
-            });
-        }
-
-        function npubToHex(npub) {
-            try {
-                const { type, data } = window.nostr.nip19.decode(npub);
-                return type === 'npub' ? data : npub;
-            } catch {
-                return npub;
-            }
-        }
-
-        // Add click handlers
-        document.getElementById('fetchButton').addEventListener('click', fetchLists);
-        document.getElementById('clearCache').addEventListener('click', clearCache);
-
-        // Auto-fetch lists if pubkey is in URL
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('pubkey')) {
-            document.getElementById('pubkey').value = urlParams.get('pubkey');
-            fetchLists();
-        }
-
-        // Check login status on page load
-        checkLoginStatus();
-    </script>
-</body>
-</html>
+{{ ... }}
