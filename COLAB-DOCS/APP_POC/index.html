@@ -880,6 +880,17 @@
                                     since: oneYearAgo
                                 }
                             ]));
+
+                            // Also check for deletion events
+                            const delSubId = Math.random().toString(36).substring(7);
+                            ws.send(JSON.stringify([
+                                "REQ",
+                                delSubId,
+                                {
+                                    kinds: [5],
+                                    "#e": [hexPubkey]
+                                }
+                            ]));
                         };
 
                         ws.onmessage = (e) => {
@@ -1311,16 +1322,67 @@
             // Update eventsMap for editing
             events.forEach(event => eventsMap.set(event.id, event));
 
-            // ... rest of the displayLists function ...
+            const container = document.getElementById('lists-container');
+            
+            if (!events || events.length === 0) {
+                container.innerHTML = '<div class="error">No lists found</div>';
+                return;
+            }
+
+            // Sort events by creation date, newest first
+            events.sort((a, b) => b.created_at - a.created_at);
+
+            const listsHtml = events.map(event => {
+                const isDeleted = deletions.has(event.id);
+                // Get list metadata from tags
+                const title = event.tags.find(t => t[0] === 'title' || t[0] === 't')?.[1] || 'Untitled List';
+                const description = event.tags.find(t => t[0] === 'description' || t[0] === 'summary')?.[1] || event.content || '';
+                
+                // Get list items
+                const items = event.tags
+                    .filter(t => ['e', 'p', 'a', 'l'].includes(t[0]))
+                    .map(t => {
+                        const type = t[0];
+                        const value = t[1];
+                        const title = t[3] || value;
+                        
+                        if (type === 'l') {
+                            return `<a href="${value}" class="list-item" target="_blank" rel="noopener noreferrer">
+                                    <span>🔗</span>${title}
+                                   </a>`;
+                        } else if (type === 'e') {
+                            return `<a href="https://njump.me/${value}" class="list-item" target="_blank" rel="noopener noreferrer">
+                                    <span>📝</span>Note
+                                   </a>`;
+                        } else if (type === 'p') {
+                            return `<a href="https://njump.me/${value}" class="list-item" target="_blank" rel="noopener noreferrer">
+                                    <span>👤</span>Profile
+                                   </a>`;
+                        }
+                        return '';
+                    })
+                    .join('');
 
                 // Add edit button if it's the current user's list and not deleted
                 const editButton = currentUser && currentUser === event.pubkey && !isDeleted ? 
                     `<button onclick="editList('${event.id}')" class="edit-button">Edit List</button>` : '';
 
+                // Add delete button if it's the current user's list and not already deleted
+                const deleteButton = currentUser && currentUser === event.pubkey && !isDeleted ? 
+                    `<button onclick="deleteList('${event.id}')" class="delete-button">Delete List</button>` : 
+                    (isDeleted ? `<button class="delete-button disabled" disabled>Deleted</button>` : '');
+
                 // Check if this is an updated version
                 const isUpdate = event.tags.find(t => t[0] === 'e' && t[2] === 'reply');
                 const versionBadge = isUpdate ? 
                     `<span class="version-badge">Edited</span>` : '';
+
+                // Show which relays have this event
+                const relayInfo = event.relays ? 
+                    `<div class="relay-info">
+                        Found on ${event.relays.length} ${event.relays.length === 1 ? 'relay' : 'relays'}: ${event.relays.join(', ')}
+                        <div id="relay-statuses-${event.id}"></div>
+                    </div>` : '';
 
                 return `
                     <div class="list-card ${isDeleted ? 'deleted' : ''}" data-event-id="${event.id}">
@@ -1331,4 +1393,54 @@
                                 ${deleteButton}
                             </div>
                         </div>
-{{ ... }}
+
+                        ${isDeleted ? 
+                            `<button id="toggle-${event.id}" class="accordion-toggle" onclick="toggleAccordion('${event.id}')">Show Details ▶</button>
+                             <div id="content-${event.id}" class="accordion-content">` : 
+                            `<div class="list-content">`}
+                        <div class="list-description">${description}</div>
+                        <div class="list-items">${items}</div>
+                        <div class="list-meta">
+                            Kind: ${event.kind} • Created: ${new Date(event.created_at * 1000).toLocaleString()}
+                            <br>Event ID: ${event.id}
+                            <br>Author: ${event.pubkey}
+                            ${relayInfo}
+                        </div>
+                        ${isDeleted ? '</div>' : '</div>'}
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = listsHtml;
+
+            // Update relay statuses for each event
+            events.forEach(event => {
+                updateRelayStatuses(event.id);
+            });
+        }
+
+        function npubToHex(npub) {
+            try {
+                const { type, data } = window.nostr.nip19.decode(npub);
+                return type === 'npub' ? data : npub;
+            } catch {
+                return npub;
+            }
+        }
+
+        // Add click handlers
+        document.getElementById('fetchButton').addEventListener('click', fetchLists);
+        document.getElementById('clearCache').addEventListener('click', clearCache);
+
+        // Auto-fetch lists if pubkey is in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('pubkey')) {
+            document.getElementById('pubkey').value = urlParams.get('pubkey');
+            fetchLists();
+        }
+
+        // Check login status on page load
+        checkLoginStatus();
+    </script>
+</body>
+</html>
